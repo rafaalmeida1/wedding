@@ -119,7 +119,7 @@ docker-compose -f docker-compose.production.yml exec api npm run db:check
 ### Banco de dados e infraestrutura
 - `DATABASE_URL`: PostgreSQL connection string
 - `REDIS_URL`: Redis connection string
-- `RABBITMQ_URL`: RabbitMQ connection string
+- `RABBITMQ_URL`: URI AMQP. No mesmo `docker-compose.production.yml`, o default é `amqp://guest:guest@rabbitmq:5672/` (**hostname `rabbitmq` = nome do serviço**). Se você sobrescrever com `.env`, não use `localhost` nos contêiners.
 
 ### Autenticação
 - `JWT_SECRET`: Secret para JWT tokens (32+ caracteres)
