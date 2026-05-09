@@ -56,6 +56,14 @@ app.onError((err, c) => {
   return c.json({ error: 'internal_error' }, 500);
 });
 
-const port = env.API_PORT;
-console.log(`[api] listening on http://localhost:${port}`);
-serve({ fetch: app.fetch, port });
+// Vercel (e outros runtimes serverless) invocam `app.fetch` via default export.
+// Local / Docker / Coolify: HTTP com @hono/node-server.
+const isVercel = process.env.VERCEL === '1';
+
+if (!isVercel) {
+  const port = env.API_PORT;
+  console.log(`[api] listening on http://localhost:${port}`);
+  serve({ fetch: app.fetch, port });
+}
+
+export default app;

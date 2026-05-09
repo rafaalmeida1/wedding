@@ -62,6 +62,9 @@ importers:
       mercadopago:
         specifier: ^2.12.0
         version: 2.12.0
+      tsx:
+        specifier: ^4.19.2
+        version: 4.21.0
       zod:
         specifier: ^3.24.1
         version: 3.25.76
@@ -75,9 +78,6 @@ importers:
       '@types/node':
         specifier: ^22.10.2
         version: 22.19.18
-      tsx:
-        specifier: ^4.19.2
-        version: 4.21.0
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -175,6 +175,9 @@ importers:
       nodemailer:
         specifier: ^6.9.16
         version: 6.10.1
+      tsx:
+        specifier: ^4.19.2
+        version: 4.21.0
       zod:
         specifier: ^3.24.1
         version: 3.25.76
@@ -185,9 +188,6 @@ importers:
       '@types/nodemailer':
         specifier: ^6.4.17
         version: 6.4.23
-      tsx:
-        specifier: ^4.19.2
-        version: 4.21.0
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
