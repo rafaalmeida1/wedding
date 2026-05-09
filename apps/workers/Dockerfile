@@ -37,5 +37,4 @@ COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start the workers
-CMD ["node", "--loader", "tsx", "apps/workers/src/index.ts"]
+CMD ["pnpm", "--filter", "@apps/workers", "start"]

@@ -37,9 +37,10 @@ COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start the API
-CMD ["node", "--loader", "tsx", "apps/api/src/index.ts"]
+# Start via pnpm so `tsx` resolve a partir do pacote (@apps/api) — `node --loader tsx`
+# desde /app não acha tsx na hierarquia pnpm.
+CMD ["pnpm", "--filter", "@apps/api", "start"]
 
-EXPOSE 3000
+EXPOSE 8887
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD wget --quiet --tries=1 --spider http://localhost:3000/health || exit 1
+    CMD wget --quiet --tries=1 --spider http://localhost:8887/health || exit 1

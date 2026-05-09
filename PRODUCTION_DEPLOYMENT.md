@@ -106,7 +106,7 @@ docker-compose -f docker-compose.production.yml logs workers
 
 1. Verifique health endpoint:
 ```bash
-curl http://localhost:3000/health
+curl http://localhost:8887/health
 ```
 
 2. Verifique conectividade com banco de dados:
@@ -153,7 +153,7 @@ docker-compose -f docker-compose.production.yml exec api npm run db:check
 - `API_PUBLIC_ORIGIN`: Origem pública da API (ex: https://api.your-domain.com)
 - `APP_URL`: URL da aplicação (ex: https://your-domain.com)
 - `NEXT_PUBLIC_API_URL`: URL da API para o cliente (ex: https://api.your-domain.com)
-- `API_PORT`: Porta da API (padrão: 3000)
+- `API_PORT`: Porta host publicada no compose (contêiner escuta **8887** por padrão; mapeamento `API_PORT:-8887:8887`)
 - `COOKIE_DOMAIN`: Domínio dos cookies (ex: your-domain.com)
 - `COOKIE_SECURE`: true/false (deve ser true em produção)
 

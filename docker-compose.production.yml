@@ -30,9 +30,10 @@ services:
     container_name: wedding-api-prod
     restart: unless-stopped
     ports:
-      - "${API_PORT:-3000}:3000"
+      - "${API_PORT:-8887}:8887"
     environment:
       NODE_ENV: production
+      API_PORT: "8887"
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
       RABBITMQ_URL: ${RABBITMQ_URL}
@@ -59,7 +60,7 @@ services:
     networks:
       - wedding-prod
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8887/health"]
       interval: 30s
       timeout: 10s
       retries: 3
