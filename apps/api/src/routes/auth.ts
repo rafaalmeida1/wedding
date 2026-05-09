@@ -12,7 +12,7 @@ import {
   updateProfileSchema,
   type AuthUser,
 } from '@repo/shared/auth';
-import { publishEmailSend } from '../kafka/producer.js';
+import { publishEmailSend } from '../rabbitmq/publisher.js';
 import { db } from '../services/db.js';
 import { and, eq, refreshTokens, users } from '@repo/db';
 import {

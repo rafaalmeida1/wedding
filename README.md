@@ -1,15 +1,15 @@
 # Lista de Presentes de Casamento
 
-Sistema full-stack de lista de presentes de casamento com **Mercado Pago Checkout Transparente** (cartão de crédito, PIX, boleto e cartão de débito virtual Caixa), upload de imagens em Cloudflare R2, e-mails transacionais via Amazon SES, eventos assíncronos em Kafka e cache em Redis.
+Sistema full-stack de lista de presentes de casamento com **Mercado Pago Checkout Transparente** (cartão de crédito, PIX, boleto e cartão de débito virtual Caixa), upload de imagens em Cloudflare R2, e-mails transacionais via Amazon SES, filas **RabbitMQ** para eventos assíncronos e cache em Redis.
 
 Implementação fiel à especificação em `especificacao-lista-presentes.docx`.
 
 ## Stack
 
 - **Frontend:** Next.js 14 (App Router) + TypeScript + Tailwind + Framer Motion + Mercado Pago Bricks (`@mercadopago/sdk-react`).
-- **Backend:** Hono em Node 20 (`@hono/node-server`) + Drizzle ORM + Zod + JWT/bcrypt + kafkajs + AWS SDK v3 (R2) + Mercado Pago SDK Node (`mercadopago`).
-- **Workers:** Consumidores Kafka separados (stock, email, payment).
-- **Infra local:** Postgres 16, Redis 7 e Redpanda (Kafka-compat) via `docker-compose`.
+- **Backend:** Hono em Node 20 (`@hono/node-server`) + Drizzle ORM + Zod + JWT/bcrypt + `amqplib` (RabbitMQ) + AWS SDK v3 (R2) + Mercado Pago SDK Node (`mercadopago`).
+- **Workers:** Consumidores RabbitMQ separados (stock, email, payment).
+- **Infra local:** Postgres 16, Redis 7 e RabbitMQ (`rabbitmq:3-management-alpine`) via `docker-compose`.
 
 > **Nota sobre runtime:** a spec original sugere Bun para o `apps/api`. Como o ambiente de desenvolvimento desta máquina não tem Bun, o backend roda em Node 20 com `@hono/node-server` (Plano B previsto no plano de implementação). pnpm é o gerenciador de pacotes do monorepo.
 
@@ -20,7 +20,7 @@ nfc/
 ├─ apps/
 │  ├─ web/        # Next.js 14
 │  ├─ api/        # Hono REST + webhooks
-│  └─ workers/    # Consumers Kafka (stock, email, payment)
+│  └─ workers/    # Consumidores RabbitMQ (stock, email, payment)
 ├─ packages/
 │  ├─ db/         # Drizzle schema + migrations + client
 │  └─ shared/     # Zod schemas + tipos compartilhados
@@ -48,7 +48,7 @@ pnpm dev
 Ferramentas de inspeção:
 
 - **Postgres:** `pnpm db:studio` (Drizzle Studio).
-- **Kafka:** Redpanda Console em http://localhost:8085.
+- **RabbitMQ:** management UI em http://localhost:15672 (`guest` / `guest`).
 - **Redis:** `docker exec -it wedding-redis redis-cli`.
 
 ## Scripts
@@ -70,7 +70,7 @@ Ferramentas de inspeção:
 1. Setup Next.js + Hono + Postgres (Drizzle) + Auth JWT.
 2. CRUD de produtos + upload R2 via presigned URL.
 3. Mercado Pago Checkout Transparente (cartão).
-4. Webhook MP → Hono → Kafka → consumers (estoque + e-mail).
+4. Webhook MP → Hono → RabbitMQ → workers (estoque + e-mail).
 5. Animações Framer Motion (NFC core, processing, success, receipt).
 6. PIX, boleto e débito virtual Caixa via Mercado Pago (fluxo assíncrono com polling).
 7. Reset de senha com Amazon SES.
@@ -185,8 +185,8 @@ Cliente                      Frontend (Next)              Backend (Hono)        
   │ ... usuário paga ...           │                            │                          │
   │                                │                            │ 10. webhook payment.upd  │
   │                                │                            │◄─────────────────────────│
-  │                                │                            │ 11. publish payment.evt  │
-  │                                │                            │ ──► Kafka ──► workers    │
+  │                                │                            │ 11. publish queues      │
+  │                                │                            │ ──► RabbitMQ ─► workers │
   │                                │ 12. polling /status        │                          │
   │                                │───────────────────────────►│                          │
   │                                │ 13. status: approved       │                          │
@@ -267,7 +267,7 @@ Se você **habilitar** uma URL pública só Cloudflare (`pub-….r2.dev` ou dom�
 | Onde | URL | O quê |
 |------|-----|--------|
 | **Vercel** | `https://casar.bitrafa.com.br` | Next.js |
-| **Servidor** | `https://api-casar.bitrafa.com.br` | Hono (`apps/api`) + `apps/workers` + Postgres/Redis/Kafka |
+| **Servidor** | `https://api-casar.bitrafa.com.br` | Hono (`apps/api`) + `apps/workers` + Postgres/Redis/RabbitMQ |
 
 Use **só o `.env` na raiz** no servidor (copie o modelo de `.env.example`). Na Vercel cadastre apenas o que o browser precisa (`NEXT_PUBLIC_*`).
 
@@ -282,6 +282,9 @@ NEXT_PUBLIC_API_URL=https://api-casar.bitrafa.com.br
 API_PUBLIC_ORIGIN=https://api-casar.bitrafa.com.br
 COOKIE_DOMAIN=.bitrafa.com.br
 COOKIE_SECURE=true
+
+# Filas (Coolify recurso RabbitMQ ou URI amqps://...)
+RABBITMQ_URL=amqp://user:pass@rabbitmq:5672/
 
 MP_ACCESS_TOKEN=APP_USR-...
 MP_NOTIFICATION_URL=https://api-casar.bitrafa.com.br/api/webhooks/mercadopago

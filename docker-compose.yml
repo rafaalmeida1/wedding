@@ -32,49 +32,26 @@ services:
       timeout: 3s
       retries: 10
 
-  redpanda:
-    image: redpandadata/redpanda:v24.2.7
-    container_name: wedding-redpanda
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: wedding-rabbitmq
     restart: unless-stopped
-    command:
-      - redpanda
-      - start
-      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
-      - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
-      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
-      - --advertise-pandaproxy-addr internal://redpanda:8082,external://localhost:18082
-      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:18081
-      - --rpc-addr redpanda:33145
-      - --advertise-rpc-addr redpanda:33145
-      - --smp 1
-      - --memory 1G
-      - --mode dev-container
-      - --default-log-level info
     ports:
-      - "19092:19092"  # Kafka API (external)
-      - "18081:18081"  # Schema Registry
-      - "18082:18082"  # PandaProxy
-      - "9644:9644"    # Admin
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
     volumes:
-      - redpanda_data:/var/lib/redpanda/data
+      - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
-      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
       timeout: 5s
-      retries: 10
-
-  redpanda-console:
-    image: redpandadata/console:v2.7.2
-    container_name: wedding-redpanda-console
-    restart: unless-stopped
-    depends_on:
-      - redpanda
-    environment:
-      KAFKA_BROKERS: redpanda:9092
-    ports:
-      - "8085:8080"
+      retries: 15
+      start_period: 40s
 
 volumes:
   postgres_data:
   redis_data:
-  redpanda_data:
+  rabbitmq_data:

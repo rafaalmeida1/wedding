@@ -18,7 +18,7 @@ import {
   getMpPayment,
   type MpPaymentResponse,
 } from '../services/mercadopago.js';
-import { publishPaymentEvent } from '../kafka/producer.js';
+import { publishPaymentEvent } from '../rabbitmq/publisher.js';
 
 // =============================================================================
 // /api/payments
@@ -131,7 +131,7 @@ app.post('/', zValidator('json', createPaymentSchema), async (c) => {
     dbId = created.id;
   }
 
-  // 6. Se já veio aprovado (cartão), dispara o evento Kafka imediatamente.
+  // 6. Se já veio aprovado (cartão), dispara o evento na fila imediatamente.
   if (localStatus === 'approved' && !existing) {
     await publishPaymentEvent({
       paymentId: dbId,
@@ -211,7 +211,7 @@ app.get('/:id/status', zValidator('param', z.object({ id: z.string().uuid() })),
       status = mapMpStatus(mp.status);
       statusDetail = mp.status_detail;
       // Se a consulta confirmou aprovação e o webhook ainda não chegou, atualizamos
-      // o registro local e disparamos o evento Kafka aqui mesmo (idempotente).
+      // o registro local e publicamos na fila aqui mesmo (idempotente).
       // (row.status já é 'pending' aqui — o guard externo garante isso.)
       if (status === 'approved') {
         await db

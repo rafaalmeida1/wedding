@@ -4,7 +4,7 @@ import { eq, payments } from '@repo/db';
 import { detectPaymentMethod, type PaymentMethod, type PaymentStatus } from '@repo/shared/payments';
 import { db } from '../services/db.js';
 import { getMpPayment, verifyMpWebhook } from '../services/mercadopago.js';
-import { publishPaymentEvent } from '../kafka/producer.js';
+import { publishPaymentEvent } from '../rabbitmq/publisher.js';
 import { mapMpStatus } from './payments.js';
 
 // =============================================================================

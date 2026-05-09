@@ -1,6 +1,7 @@
 import { startPaymentConsumer } from './consumers/payment.js';
 import { startStockConsumer } from './consumers/stock.js';
 import { startEmailConsumer } from './consumers/email.js';
+import { closeConnection } from './services/rabbitmq.js';
 
 async function main() {
   console.log('[workers] starting consumers...');
@@ -14,6 +15,7 @@ async function main() {
   const shutdown = async (signal: NodeJS.Signals) => {
     console.log(`[workers] received ${signal}, disconnecting...`);
     await Promise.all(consumers.map((c) => c.disconnect().catch(() => null)));
+    await closeConnection().catch(() => null);
     process.exit(0);
   };
   process.on('SIGINT', shutdown);

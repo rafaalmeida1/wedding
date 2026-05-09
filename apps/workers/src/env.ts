@@ -14,15 +14,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1).default('redis://localhost:6379'),
 
-  KAFKA_BROKERS: z.string().min(1).default('localhost:19092'),
-  KAFKA_USERNAME: z.string().optional(),
-  KAFKA_PASSWORD: z.string().optional(),
-  KAFKA_SSL: z
-    .union([z.literal('true'), z.literal('false')])
-    .default('false')
-    .transform((v) => v === 'true'),
-  KAFKA_CLIENT_ID: z.string().default('wedding-workers'),
-  KAFKA_GROUP_ID: z.string().default('wedding-workers'),
+  RABBITMQ_URL: z.string().url().default('amqp://guest:guest@localhost:5672/'),
 
   WORKERS_CONCURRENCY: z.coerce.number().int().positive().default(2),
 

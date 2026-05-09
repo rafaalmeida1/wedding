@@ -1,12 +1,13 @@
 import { z } from 'zod';
 
-export const KafkaTopics = {
+/** Filas RabbitMQ duráveis (nomes herdados do modelo antigo tipo Kafka topics). */
+export const EventQueues = {
   PaymentEvents: 'payment.events',
   StockUpdate: 'stock.update',
   EmailSend: 'email.send',
 } as const;
 
-export type KafkaTopic = (typeof KafkaTopics)[keyof typeof KafkaTopics];
+export type EventQueueName = (typeof EventQueues)[keyof typeof EventQueues];
 
 export const paymentEventSchema = z.object({
   paymentId: z.string().uuid(),
