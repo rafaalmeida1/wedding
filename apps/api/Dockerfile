@@ -7,6 +7,7 @@ RUN npm install -g pnpm
 
 # Copy workspace files
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json tsconfig.base.json ./
+COPY scripts ./scripts
 COPY packages ./packages
 COPY apps/api ./apps/api
 
