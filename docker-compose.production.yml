@@ -13,12 +13,13 @@ services:
       RABBITMQ_DEFAULT_PASS: guest
     volumes:
       - rabbitmq_data_prod:/var/lib/rabbitmq
+    # Coolify aguarda service_healthy — diagnostics no Alpine às vezes falha; ping + start_period longo.
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 15
-      start_period: 40s
+      test: ["CMD", "rabbitmqctl", "ping"]
+      interval: 15s
+      timeout: 15s
+      retries: 20
+      start_period: 120s
     networks:
       - wedding-prod
 
