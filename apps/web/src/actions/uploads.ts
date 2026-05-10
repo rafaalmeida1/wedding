@@ -1,8 +1,10 @@
 'use server';
 
 import crypto from 'node:crypto';
+import { cookies } from 'next/headers';
 import type { ProductImageUploadResponse } from '@repo/shared/products';
 import { getCurrentUser } from '@/actions/auth';
+import { resolveSessionUserIdFromCookie } from '@/lib/access-jwt';
 import { productImagePublicUrl, putProductImage } from '@/lib/r2-product-image';
 
 export type ProductImageUploadResult =
@@ -26,12 +28,21 @@ function getImageFromFormData(formData: FormData): File | null {
 }
 
 /**
- * Upload vai direto ao R2 a partir do Next (credenciais no ambiente da Vercel).
- * Evita 401 pelo Hono quando cookies de sessão não são repassados servidor→API.
+ * Upload vai direto ao R2 no Next (`PutObject`).
+ * Preferimos `sub` do JWT no cookie (`wg_access`) — não depende de `fetch` à API funcionar na Vercel.
  */
 export async function uploadProductImageAction(formData: FormData): Promise<ProductImageUploadResult> {
-  const user = await getCurrentUser();
-  if (!user) {
+  let userId = resolveSessionUserIdFromCookie();
+  if (!userId) {
+    const user = await getCurrentUser();
+    if (user) userId = user.id;
+  }
+  if (!userId) {
+    const jar = cookies().getAll().map((c) => c.name).join(', ');
+    console.warn('[uploadProductImageAction] sessão não resolvida', {
+      hasJwtSecretOnNext: !!(process.env.JWT_SECRET && process.env.JWT_SECRET.length >= 16),
+      cookieNames: jar || '(none)',
+    });
     return { ok: false, message: 'Faça login novamente para enviar imagens.' };
   }
 
@@ -52,7 +63,7 @@ export async function uploadProductImageAction(formData: FormData): Promise<Prod
   }
 
   const id = crypto.randomUUID();
-  const key = `products/${user.id}/${id}.${ext}`;
+  const key = `products/${userId}/${id}.${ext}`;
 
   try {
     const buf = Buffer.from(await file.arrayBuffer());
