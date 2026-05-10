@@ -12,6 +12,7 @@
     "test:install": "playwright install --with-deps chromium"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1045.0",
     "@mercadopago/sdk-react": "^1.0.7",
     "@repo/shared": "workspace:*",
     "clsx": "^2.1.1",
