@@ -50,12 +50,16 @@ const envSchema = z.object({
     (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
     z.string().url().optional(),
   ),
-  // Base HTTP onde a API é acessível (ex.: mesmo valor que NEXT_PUBLIC_API_URL). Com R2_PUBLIC_URL
-  // vazio, presigned devolve {API_PUBLIC_ORIGIN}/api/public/r2/{key} (bucket pode ficar privado).
-  API_PUBLIC_ORIGIN: z.preprocess(
-    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
-    z.string().url().optional(),
-  ),
+  // Base onde o browser pode chamar esta API por HTTPS (igual NEXT_PUBLIC_API_URL no front).
+  // Se vazio sem R2_PUBLIC_URL público, presign falha em produção. Opcional BACKEND_PUBLIC_URL como alias (mesmo valor).
+  API_PUBLIC_ORIGIN: z.preprocess((v) => {
+    const a = typeof v === 'string' ? v.trim() : '';
+    if (a !== '') return a.replace(/\/$/, '');
+    const b =
+      typeof process.env.BACKEND_PUBLIC_URL === 'string' ? process.env.BACKEND_PUBLIC_URL.trim() : '';
+    if (b !== '') return b.replace(/\/$/, '');
+    return undefined;
+  }, z.string().url().optional()),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -40,7 +40,17 @@ export async function apiServer<T>(
     cache: noStore ? 'no-store' : rest.cache,
   };
 
-  const res = await fetch(`${INTERNAL_API_URL}${path}`, init);
+  const origin = INTERNAL_API_URL.replace(/\/$/, '');
+  let res: Response;
+  try {
+    res = await fetch(`${origin}${path}`, init);
+  } catch (err) {
+    const msg =
+      err instanceof Error
+        ? `${err.message} (${origin}${path}). Verifique API_INTERNAL_URL / NEXT_PUBLIC_API_URL no servidor.`
+        : 'Falha de rede ao falar com a API (URL ou TLS). Confira NEXT_PUBLIC_API_URL/API_INTERNAL_URL.';
+    throw new ApiError(502, msg, err);
+  }
   const text = await res.text();
   const data = text ? safeJson(text) : null;
   const setCookie = res.headers.getSetCookie?.() ?? [];

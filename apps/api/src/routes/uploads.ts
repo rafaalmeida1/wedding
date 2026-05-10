@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { HTTPException } from 'hono/http-exception';
 import { zValidator } from '@hono/zod-validator';
 import crypto from 'node:crypto';
 import { presignedUrlSchema, type PresignedUrlResponse } from '@repo/shared/products';
@@ -22,6 +23,9 @@ app.post(
     const { contentType, size } = c.req.valid('json');
     const id = crypto.randomUUID();
     const ext = EXT_MAP[contentType];
+    if (!ext) {
+      throw new HTTPException(400, { message: 'tipo de arquivo não permitido' });
+    }
     const key = `products/${auth.sub}/${id}.${ext}`;
     const presigned = await presignR2Upload({
       key,
