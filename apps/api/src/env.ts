@@ -18,8 +18,10 @@ const envSchema = z.object({
 
   JWT_SECRET: z.string().min(16),
   JWT_REFRESH_SECRET: z.string().min(16),
-  JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().positive().default(900),
-  JWT_REFRESH_TTL_SECONDS: z.coerce.number().int().positive().default(60 * 60 * 24 * 7),
+  /** Sessão de acesso estável (~12 h). Tokens antigos (ex.: 900s) faziam “logout” ao recarregar rapidamente sem refresh automático no Next. */
+  JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().positive().default(60 * 60 * 12),
+  /** Renova junto com refresh; igual ao access garante política única (~12 h sem surpresas). Sobrescreva no .env se quiser refresh mais longo. */
+  JWT_REFRESH_TTL_SECONDS: z.coerce.number().int().positive().default(60 * 60 * 12),
   COOKIE_DOMAIN: z.string().default('localhost'),
   COOKIE_SECURE: z
     .union([z.literal('true'), z.literal('false')])

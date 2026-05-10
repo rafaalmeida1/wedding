@@ -15,6 +15,8 @@ interface RequestOptions extends RequestInit {
   json?: unknown;
   /** quando true (default) força no-store em server requests. */
   noStore?: boolean;
+  /** Sobrescreve o header Cookie inteiro (ex.: mesmo request após /auth/refresh). */
+  cookieHeader?: string;
 }
 
 export async function apiServer<T>(
@@ -22,17 +24,18 @@ export async function apiServer<T>(
   opts: RequestOptions = {},
 ): Promise<{ data: T; setCookie: string[] }> {
   const cookieStore = cookies();
-  const cookieHeader = cookieStore
-    .getAll()
-    .map((c) => `${c.name}=${c.value}`)
-    .join('; ');
 
-  const { json, noStore = true, headers, ...rest } = opts;
+  const { json, noStore = true, cookieHeader: cookieHeaderOverride, headers, ...rest } = opts;
+  const upstreamCookie =
+    cookieHeaderOverride !== undefined
+      ? cookieHeaderOverride
+      : cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join('; ');
+
   const init: RequestInit = {
     ...rest,
     headers: {
       Accept: 'application/json',
-      Cookie: cookieHeader,
+      Cookie: upstreamCookie,
       ...(json !== undefined ? { 'Content-Type': 'application/json' } : {}),
       ...headers,
     },

@@ -12,6 +12,38 @@ export interface AuthState {
   fieldErrors?: Record<string, string[]>;
 }
 
+/** Alinhados a `ACCESS_COOKIE` / `REFRESH_COOKIE` na API. */
+const WG_ACCESS = 'wg_access';
+const WG_REFRESH = 'wg_refresh';
+
+function mergedCookieHeader(
+  snap: ReadonlyArray<{ name: string; value: string }>,
+  updates: Partial<Record<string, string>>,
+): string {
+  const map: Record<string, string> = Object.fromEntries(snap.map((c) => [c.name, c.value]));
+  for (const [k, v] of Object.entries(updates)) {
+    if (typeof v === 'string' && v !== '') map[k] = v;
+  }
+  return Object.entries(map)
+    .map(([n, v]) => `${n}=${v}`)
+    .join('; ');
+}
+
+function authTokensFromSetCookieLines(lines: string[]): Partial<Record<string, string>> {
+  const picked: Partial<Record<string, string>> = {};
+  const want = new Set([WG_ACCESS, WG_REFRESH]);
+  for (const line of lines) {
+    const [first] = line.split(';');
+    if (!first) continue;
+    const eq = first.indexOf('=');
+    if (eq === -1) continue;
+    const name = first.slice(0, eq).trim();
+    if (!want.has(name)) continue;
+    picked[name] = first.slice(eq + 1).trim();
+  }
+  return picked;
+}
+
 function applySetCookie(setCookie: string[]) {
   const store = cookies();
   for (const raw of setCookie) {
@@ -109,11 +141,36 @@ export async function logoutAction() {
 }
 
 export async function getCurrentUser(): Promise<AuthUser | null> {
+  const snap = [...cookies().getAll()];
+  const cookieHeader = mergedCookieHeader(snap, {});
   try {
-    const { data } = await apiServer<{ user: AuthUser }>('/api/auth/me');
+    const { data } = await apiServer<{ user: AuthUser }>('/api/auth/me', { cookieHeader });
     return data.user;
   } catch (err) {
-    if (err instanceof ApiError && err.status === 401) return null;
-    throw err;
+    if (!(err instanceof ApiError)) throw err;
+    if (err.status !== 401) throw err;
+  }
+
+  try {
+    const refresh = await apiServer<{ user: AuthUser }>('/api/auth/refresh', {
+      method: 'POST',
+      cookieHeader,
+    });
+    applySetCookie(refresh.setCookie);
+    const updated = authTokensFromSetCookieLines(refresh.setCookie);
+    const retryHeader =
+      Object.keys(updated).length > 0 ? mergedCookieHeader(snap, updated) : cookieHeader;
+    try {
+      const { data } = await apiServer<{ user: AuthUser }>('/api/auth/me', {
+        cookieHeader: retryHeader,
+      });
+      return data.user;
+    } catch (e2) {
+      if (e2 instanceof ApiError && e2.status === 401) return null;
+      throw e2;
+    }
+  } catch (e1) {
+    if (e1 instanceof ApiError && e1.status === 401) return null;
+    throw e1;
   }
 }
