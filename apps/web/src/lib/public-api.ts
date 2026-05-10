@@ -25,7 +25,11 @@ export async function getPublicList(username: string): Promise<PublicListData | 
     ]);
     return { couple: couple.data.couple, products: products.data.products };
   } catch (err) {
-    if (err instanceof ApiError && err.status === 404) return null;
+    if (
+      err instanceof ApiError &&
+      (err.status === 404 || err.status === 400 || err.status === 422)
+    )
+      return null;
     throw err;
   }
 }
@@ -40,7 +44,11 @@ export async function getPublicGift(
     );
     return data;
   } catch (err) {
-    if (err instanceof ApiError && err.status === 404) return null;
+    if (
+      err instanceof ApiError &&
+      (err.status === 404 || err.status === 400 || err.status === 422)
+    )
+      return null;
     throw err;
   }
 }

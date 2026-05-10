@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
+import { usernameSchema } from '@repo/shared/auth';
 import { and, asc, desc, eq, products, users } from '@repo/db';
 import { db } from '../services/db.js';
 import type { PublicProduct } from '@repo/shared/products';
@@ -9,7 +10,7 @@ import { ensureRedis, redis, RedisKeys } from '../services/redis.js';
 
 const app = new Hono();
 
-const usernameParam = z.object({ username: z.string().min(3).max(32) });
+const usernameParam = z.object({ username: usernameSchema });
 
 interface PublicCouple {
   username: string;
@@ -74,7 +75,7 @@ app.get(
   '/:username/products/:id',
   zValidator(
     'param',
-    z.object({ username: z.string().min(3).max(32), id: z.string().uuid() }),
+    z.object({ username: usernameSchema, id: z.string().uuid() }),
   ),
   async (c) => {
     const { username, id } = c.req.valid('param');

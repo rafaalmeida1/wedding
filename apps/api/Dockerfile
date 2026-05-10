@@ -39,7 +39,8 @@ ENTRYPOINT ["dumb-init", "--"]
 
 # Start via pnpm so `tsx` resolve a partir do pacote (@apps/api) — `node --loader tsx`
 # desde /app não acha tsx na hierarquia pnpm.
-CMD ["pnpm", "--filter", "@apps/api", "start"]
+# Migra Drizzle antes de subir a API para evitar PostgresError "relation does not exist"
+CMD ["sh", "-c", "pnpm --filter @repo/db db:migrate && pnpm --filter @apps/api start"]
 
 EXPOSE 8887
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \

@@ -46,6 +46,9 @@ services:
       dockerfile: ./apps/workers/Dockerfile
     container_name: wedding-workers-prod
     restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
     environment:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL}

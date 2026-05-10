@@ -9,6 +9,8 @@ O setup de produção inclui:
 
 Não há RabbitMQ: tudo passa pelo **mesmo `REDIS_URL`**.
 
+Ao subir com Docker, o container da **API** executa **`pnpm --filter @repo/db db:migrate`** antes de iniciar o servidor (`apps/api/Dockerfile`). Assim o PostgreSQL recebe as tabelas Drizzle (`users`, etc.). Em ambiente onde você sobrescreve o `CMD` da imagem, rode manualmente `pnpm db:migrate` contra o mesmo **`DATABASE_URL`**.
+
 ## Prerequisites
 
 - Docker e Docker Compose
@@ -75,6 +77,11 @@ docker-compose -f docker-compose.production.yml up -d --scale workers=3
 ```
 
 ## Troubleshooting
+
+### PostgresError: relation "users" does not exist
+
+1. Confira se as migrações rodaram (`docker-compose ... logs api` deve mostrar `[migrate] done` no arranque, ou rode `pnpm db:migrate` no host usando o mesmo `DATABASE_URL`).
+2. Confirme que **API**, **workers** e o comando **`db:migrate`** apontam para o mesmo banco.
 
 ### Workers não processam jobs
 

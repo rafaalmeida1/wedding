@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { Heart, Sparkles } from 'lucide-react';
+import { usernameSchema } from '@repo/shared/auth';
 import { getPublicList } from '@/lib/public-api';
 import { formatBRL } from '@/lib/format';
 import { FloralBackdrop } from '@/components/public/FloralBackdrop';
@@ -13,7 +14,9 @@ interface PageProps {
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: PageProps) {
-  const data = await getPublicList(params.username);
+  const slug = usernameSchema.safeParse(params.username);
+  if (!slug.success) return { title: 'Lista não encontrada' };
+  const data = await getPublicList(slug.data);
   if (!data) return { title: 'Lista não encontrada' };
   return {
     title: `Lista de Presentes — ${data.couple.name}`,
@@ -22,7 +25,9 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 export default async function PublicListPage({ params }: PageProps) {
-  const data = await getPublicList(params.username);
+  const slug = usernameSchema.safeParse(params.username);
+  if (!slug.success) notFound();
+  const data = await getPublicList(slug.data);
   if (!data) notFound();
   const { couple, products } = data;
 

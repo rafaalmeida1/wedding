@@ -2,6 +2,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
+import { z } from 'zod';
+import { usernameSchema } from '@repo/shared/auth';
 import { getPublicGift } from '@/lib/public-api';
 import { formatBRL } from '@/lib/format';
 import { GiftCheckout } from '@/components/payment/GiftCheckout';
@@ -14,7 +16,10 @@ interface PageProps {
 export const dynamic = 'force-dynamic';
 
 export default async function GiftPaymentPage({ params }: PageProps) {
-  const data = await getPublicGift(params.username, params.id);
+  const slug = usernameSchema.safeParse(params.username);
+  const idParsed = z.string().uuid().safeParse(params.id);
+  if (!slug.success || !idParsed.success) notFound();
+  const data = await getPublicGift(slug.data, idParsed.data);
   if (!data) notFound();
   const { couple, product } = data;
 
