@@ -38,7 +38,9 @@ function applySetCookie(setCookie: string[]) {
           ? 'strict'
           : parsed.samesite === 'Lax' || parsed.samesite === 'lax'
             ? 'lax'
-            : 'lax',
+            : parsed.samesite === 'None' || parsed.samesite === 'none'
+              ? 'none'
+              : 'lax',
       path: typeof parsed.path === 'string' ? parsed.path : '/',
       domain: typeof parsed.domain === 'string' ? parsed.domain : undefined,
       maxAge: typeof parsed['max-age'] === 'string' ? Number(parsed['max-age']) : undefined,

@@ -10,10 +10,13 @@ interface CookieOptions {
 }
 
 function baseOptions({ maxAge }: CookieOptions) {
+  // Front (Next) em um host e API em outro é cross-site para o navegador: precisa SameSite=None
+  // quando Secure está ligado ou o Session cookie não vai no fetch com credentials.
+  const sameSite = env.COOKIE_SECURE ? ('None' as const) : ('Lax' as const);
   return {
     httpOnly: true,
     secure: env.COOKIE_SECURE,
-    sameSite: 'Strict' as const,
+    sameSite,
     path: '/',
     domain: env.COOKIE_DOMAIN,
     maxAge,
