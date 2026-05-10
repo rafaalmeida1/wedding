@@ -13,12 +13,12 @@ services:
       RABBITMQ_DEFAULT_PASS: guest
     volumes:
       - rabbitmq_data_prod:/var/lib/rabbitmq
-    # Coolify aguarda service_healthy — diagnostics no Alpine às vezes falha; ping + start_period longo.
+    # `ping` não garante AMQP em 5672 no mesmo instante — workers retentam conexão em apps/workers.
     healthcheck:
       test: ["CMD", "rabbitmqctl", "ping"]
       interval: 15s
       timeout: 15s
-      retries: 20
+      retries: 25
       start_period: 120s
     networks:
       - wedding-prod

@@ -121,6 +121,8 @@ docker-compose -f docker-compose.production.yml exec api npm run db:check
 - `REDIS_URL`: Redis connection string
 - `RABBITMQ_URL`: URI AMQP. No mesmo `docker-compose.production.yml`, o default é `amqp://guest:guest@rabbitmq:5672/` (**hostname `rabbitmq` = nome do serviço**). Se você sobrescrever com `.env`, não use `localhost` nos contêiners.
 
+**Coolify:** ative **Connect To Predefined Network** (ou equivalente) para API, workers e RabbitMQ ficarem na mesma rede Docker — caso contrário o host resolvido (ex.: `10.0.x.x`) pode recusar `ECONNREFUSED` na porta 5672. Os workers agora **retentam** a conexão AMQP várias vezes ao iniciar; se continuar falhando, o problema é rede/URL, não só timing.
+
 ### Autenticação
 - `JWT_SECRET`: Secret para JWT tokens (32+ caracteres)
 - `JWT_REFRESH_SECRET`: Secret para refresh tokens (32+ caracteres)
