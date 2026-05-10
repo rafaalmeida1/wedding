@@ -63,3 +63,48 @@ export async function apiServer<T>(
   }
   return { data: data as T, setCookie };
 }
+
+/** Multipart para upload de arquivo; não define Content-Type (boundary automático). */
+export async function apiServerMultipart<T>(
+  path: string,
+  formData: FormData,
+  opts: Pick<RequestOptions, 'noStore' | 'cookieHeader'> = {},
+): Promise<{ data: T; setCookie: string[] }> {
+  const cookieStore = cookies();
+
+  const { noStore = true, cookieHeader: cookieHeaderOverride } = opts;
+  const upstreamCookie =
+    cookieHeaderOverride !== undefined
+      ? cookieHeaderOverride
+      : cookieStore.getAll().map((c) => `${c.name}=${c.value}`).join('; ');
+
+  const init: RequestInit = {
+    method: 'POST',
+    body: formData,
+    headers: {
+      Accept: 'application/json',
+      Cookie: upstreamCookie,
+    },
+    cache: noStore ? 'no-store' : undefined,
+  };
+
+  const origin = INTERNAL_API_URL.replace(/\/$/, '');
+  let res: Response;
+  try {
+    res = await fetch(`${origin}${path}`, init);
+  } catch (err) {
+    const msg =
+      err instanceof Error
+        ? `${err.message} (${origin}${path}). Verifique API_INTERNAL_URL / NEXT_PUBLIC_API_URL no servidor.`
+        : 'Falha de rede ao falar com a API (URL ou TLS). Confira NEXT_PUBLIC_API_URL/API_INTERNAL_URL.';
+    throw new ApiError(502, msg, err);
+  }
+  const text = await res.text();
+  const data = text ? safeJson(text) : null;
+  const setCookie = res.headers.getSetCookie?.() ?? [];
+
+  if (!res.ok) {
+    throw new ApiError(res.status, extractMessage(data, res.statusText), data);
+  }
+  return { data: data as T, setCookie };
+}

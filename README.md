@@ -67,7 +67,7 @@ Ferramentas de inspeção:
 ## Fases (`especificacao-lista-presentes.docx` §14)
 
 1. Setup Next.js + Hono + Postgres (Drizzle) + Auth JWT.
-2. CRUD de produtos + upload R2 via presigned URL.
+2. CRUD de produtos + upload de imagens para R2 pela API (`PutObject` com credenciais no servidor).
 3. Mercado Pago Checkout Transparente (cartão).
 4. Webhook MP → Hono → **fila Redis (BullMQ)** → workers (estoque + e-mail).
 5. Animações Framer Motion (NFC core, processing, success, receipt).

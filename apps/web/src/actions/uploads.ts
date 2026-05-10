@@ -1,32 +1,36 @@
 'use server';
 
-import { presignedUrlSchema, type PresignedUrlResponse } from '@repo/shared/products';
-import { apiServer, ApiError } from '@/lib/api';
+import type { ProductImageUploadResponse } from '@repo/shared/products';
+import { apiServerMultipart } from '@/lib/api';
+import { errorMessageFromUnknown } from '@/lib/api-error';
 
-/** Next pode serializar um único argumento como array `[payload]` na action. */
-function unwrapServerActionArg(input: unknown): unknown {
-  let cur = input;
-  while (Array.isArray(cur) && cur.length === 1) {
-    cur = cur[0];
-  }
-  return cur;
-}
+export type ProductImageUploadResult =
+  | { ok: true; payload: ProductImageUploadResponse }
+  | { ok: false; message: string };
 
-export async function presignedProductImageUploadAction(input: unknown): Promise<PresignedUrlResponse> {
-  const normalized = unwrapServerActionArg(input);
-  const parsed = presignedUrlSchema.safeParse(normalized);
-  if (!parsed.success) {
-    throw new Error(parsed.error.flatten().formErrors.join(', ') || 'dados inválidos');
+/** Multipart server→API: credenciais R2 só na API; cookie de sessão segue no fetch do Next. */
+export async function uploadProductImageAction(formData: FormData): Promise<ProductImageUploadResult> {
+  const file = formData.get('image');
+  if (!(file instanceof Blob) || file.size <= 0) {
+    return { ok: false, message: 'envie um arquivo de imagem' };
   }
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    return { ok: false, message: 'formato de imagem inválido (use JPG, PNG ou WebP)' };
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    return { ok: false, message: 'imagem deve ter no máximo 8MB' };
+  }
+
+  const outbound = new FormData();
+  outbound.append('image', file);
+
   try {
-    const { data } = await apiServer<PresignedUrlResponse>('/api/products/presigned-url', {
-      method: 'POST',
-      json: parsed.data,
-    });
-    return data;
+    const { data } = await apiServerMultipart<ProductImageUploadResponse>(
+      '/api/products/upload-image',
+      outbound,
+    );
+    return { ok: true, payload: data };
   } catch (err) {
-    if (err instanceof ApiError) throw new Error(err.message);
-    if (err instanceof Error) throw err;
-    throw new Error(String(err));
+    return { ok: false, message: errorMessageFromUnknown(err) };
   }
 }

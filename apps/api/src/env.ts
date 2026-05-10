@@ -22,7 +22,11 @@ const envSchema = z.object({
   JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().positive().default(60 * 60 * 12),
   /** Renova junto com refresh; igual ao access garante política única (~12 h sem surpresas). Sobrescreva no .env se quiser refresh mais longo. */
   JWT_REFRESH_TTL_SECONDS: z.coerce.number().int().positive().default(60 * 60 * 12),
-  COOKIE_DOMAIN: z.string().default('localhost'),
+  // Em branco ou ausente em produção: não envia Domain no Set-Cookie (host atual). Útil no preview *.vercel.app.
+  COOKIE_DOMAIN: z.preprocess(
+    (v) => (typeof v === 'string' && v.trim() === '' ? undefined : v),
+    z.string().min(1).optional(),
+  ),
   COOKIE_SECURE: z
     .union([z.literal('true'), z.literal('false')])
     .default('false')
@@ -53,7 +57,7 @@ const envSchema = z.object({
     z.string().url().optional(),
   ),
   // Base onde o browser pode chamar esta API por HTTPS (igual NEXT_PUBLIC_API_URL no front).
-  // Se vazio sem R2_PUBLIC_URL público, presign falha em produção. Opcional BACKEND_PUBLIC_URL como alias (mesmo valor).
+  // Se vazio sem R2_PUBLIC_URL público, a URL da imagem retornada pelo upload usa este origin + /api/public/r2/.
   API_PUBLIC_ORIGIN: z.preprocess((v) => {
     const a = typeof v === 'string' ? v.trim() : '';
     if (a !== '') return a.replace(/\/$/, '');

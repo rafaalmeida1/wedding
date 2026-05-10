@@ -1,10 +1,4 @@
-import {
-  DeleteObjectCommand,
-  GetObjectCommand,
-  PutObjectCommand,
-  S3Client,
-} from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { DeleteObjectCommand, GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { env } from '../env.js';
 
 let cachedClient: S3Client | null = null;
@@ -108,40 +102,33 @@ function resolvedApiPublicOrigin(): string {
   return `http://localhost:${env.API_PORT}`;
 }
 
-/** Sem barra final. */
-function resolveProductImageBaseForPresign(): string {
+/** Base pública onde o navegador lê imagens (<base>/<key>). */
+export function resolveProductImagePublicBase(): string {
   const direct = effectiveDirectPublicBase();
   if (direct) return direct;
   const apiOrigin = resolvedApiPublicOrigin();
   return `${apiOrigin}/api/public/r2`;
 }
 
-interface PresignArgs {
-  key: string;
-  contentType: string;
-  contentLength: number;
+export function productImagePublicUrl(key: string): string {
+  const base = resolveProductImagePublicBase();
+  return `${base}/${key}`;
 }
 
-export async function presignR2Upload({
-  key,
-  contentType,
-  contentLength,
-}: PresignArgs): Promise<{ uploadUrl: string; publicUrl: string; expiresIn: number }> {
-  const expiresIn = 60 * 5;
-  const url = await getSignedUrl(
-    client(),
+export async function putProductImageDirect(args: {
+  key: string;
+  body: Uint8Array | Buffer;
+  contentType: string;
+}): Promise<void> {
+  await client().send(
     new PutObjectCommand({
       Bucket: env.R2_BUCKET_NAME,
-      Key: key,
-      ContentType: contentType,
-      ContentLength: contentLength,
+      Key: args.key,
+      Body: Buffer.isBuffer(args.body) ? args.body : Buffer.from(args.body),
+      ContentType: args.contentType,
+      ContentLength: args.body.length,
     }),
-    { expiresIn },
   );
-
-  const base = resolveProductImageBaseForPresign();
-  const publicUrl = `${base}/${key}`;
-  return { uploadUrl: url, publicUrl, expiresIn };
 }
 
 export async function getProductImageObject(

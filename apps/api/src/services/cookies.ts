@@ -18,7 +18,7 @@ function baseOptions({ maxAge }: CookieOptions) {
     secure: env.COOKIE_SECURE,
     sameSite,
     path: '/',
-    domain: env.COOKIE_DOMAIN,
+    ...(env.COOKIE_DOMAIN ? ({ domain: env.COOKIE_DOMAIN } as const) : {}),
     maxAge,
   };
 }
@@ -34,6 +34,7 @@ export function setAuthCookies(c: Context, accessToken: string, refreshToken: st
 }
 
 export function clearAuthCookies(c: Context) {
-  deleteCookie(c, ACCESS_COOKIE, { path: '/', domain: env.COOKIE_DOMAIN });
-  deleteCookie(c, REFRESH_COOKIE, { path: '/', domain: env.COOKIE_DOMAIN });
+  const del = { path: '/', ...(env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}) };
+  deleteCookie(c, ACCESS_COOKIE, del);
+  deleteCookie(c, REFRESH_COOKIE, del);
 }

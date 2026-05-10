@@ -20,6 +20,4 @@ export const RedisKeys = {
   productStock: (id: string) => `product:stock:${id}`,
   rateLimit: (ip: string) => `ratelimit:${ip}`,
   tokenBlacklist: (jti: string) => `token:blacklist:${jti}`,
-  presigned: (key: string) => `presigned:${key}`,
-  session: (userId: string) => `session:${userId}`,
 } as const;
