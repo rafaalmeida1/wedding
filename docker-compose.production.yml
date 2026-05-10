@@ -1,28 +1,6 @@
 version: '3.8'
 
 services:
-  rabbitmq:
-    image: rabbitmq:3-management-alpine
-    container_name: wedding-rabbitmq-prod
-    restart: unless-stopped
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
-    volumes:
-      - rabbitmq_data_prod:/var/lib/rabbitmq
-    # `ping` não garante AMQP em 5672 no mesmo instante — workers retentam conexão em apps/workers.
-    healthcheck:
-      test: ["CMD", "rabbitmqctl", "ping"]
-      interval: 15s
-      timeout: 15s
-      retries: 25
-      start_period: 120s
-    networks:
-      - wedding-prod
-
   api:
     build:
       context: .
@@ -36,8 +14,6 @@ services:
       API_PORT: "8887"
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
-      # Dentro da rede Docker use o hostname do serviço `rabbitmq`, não localhost.
-      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672/}
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       JWT_ACCESS_TTL_SECONDS: ${JWT_ACCESS_TTL_SECONDS}
@@ -55,9 +31,6 @@ services:
       R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
       R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
       R2_BUCKET_NAME: ${R2_BUCKET_NAME}
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
     networks:
       - wedding-prod
     healthcheck:
@@ -77,8 +50,6 @@ services:
       NODE_ENV: production
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
-      # Dentro da rede Docker use o hostname do serviço `rabbitmq`, não localhost.
-      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672/}
       WORKERS_CONCURRENCY: ${WORKERS_CONCURRENCY:-4}
       SMTP_HOST: ${SMTP_HOST}
       SMTP_PORT: ${SMTP_PORT}
@@ -87,14 +58,8 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL}
       SMTP_FROM_NAME: ${SMTP_FROM_NAME}
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
     networks:
       - wedding-prod
-
-volumes:
-  rabbitmq_data_prod:
 
 networks:
   wedding-prod:

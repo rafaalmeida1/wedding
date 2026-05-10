@@ -6,7 +6,6 @@
     "NODE_ENV",
     "DATABASE_URL",
     "REDIS_URL",
-    "RABBITMQ_URL",
     "JWT_SECRET",
     "JWT_REFRESH_SECRET",
     "MP_ACCESS_TOKEN",

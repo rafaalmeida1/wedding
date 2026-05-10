@@ -55,13 +55,10 @@ case "${1:-help}" in
   
   health)
     echo "Checking service health..."
-    docker-compose -f "$COMPOSE_FILE" ps | grep -E "(rabbitmq|api|workers)"
+    docker-compose -f "$COMPOSE_FILE" ps | grep -E "(api|workers)"
     echo ""
-    echo "Checking API health:"
-    curl -s http://localhost:3000/health | jq . || echo "API not responding"
-    echo ""
-    echo "Checking RabbitMQ management:"
-    curl -s -u guest:guest http://localhost:15672/api/aliveness-test/% | jq . || echo "RabbitMQ management not responding"
+    echo "Checking API health (port 8887):"
+    curl -s http://localhost:8887/health | jq . || echo "API not responding"
     ;;
   
   shell)
@@ -86,7 +83,7 @@ case "${1:-help}" in
     echo "  down              - Stop all services"
     echo "  restart           - Restart all services"
     echo "  status            - Show service status"
-    echo "  logs [service]    - Show logs (api, workers, rabbitmq)"
+    echo "  logs [service]    - Show logs (api, workers)"
     echo "  build             - Build images"
     echo "  rebuild           - Rebuild images and restart"
     echo "  health            - Check health of services"

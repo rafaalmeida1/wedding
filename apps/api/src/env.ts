@@ -16,9 +16,6 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1).default('redis://localhost:6379'),
 
-  /** AMQP URI (Coolify/recursos RabbitMQ ou amqp://guest:guest@localhost:5672/ local). */
-  RABBITMQ_URL: z.string().url().default('amqp://guest:guest@localhost:5672/'),
-
   JWT_SECRET: z.string().min(16),
   JWT_REFRESH_SECRET: z.string().min(16),
   JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().positive().default(900),

@@ -1,13 +1,16 @@
 import { z } from 'zod';
 
-/** Filas RabbitMQ duráveis (nomes herdados do modelo antigo tipo Kafka topics). */
-export const EventQueues = {
+/** Prefixo Redis BullMQ (compartilhado API + workers). */
+export const BULL_JOB_PREFIX = 'wedding:jobs';
+
+/** Nomes das filas BullMQ (persistem no mesmo Redis das demais operações da app). */
+export const JobQueues = {
   PaymentEvents: 'payment.events',
   StockUpdate: 'stock.update',
   EmailSend: 'email.send',
 } as const;
 
-export type EventQueueName = (typeof EventQueues)[keyof typeof EventQueues];
+export type JobQueueName = (typeof JobQueues)[keyof typeof JobQueues];
 
 export const paymentEventSchema = z.object({
   paymentId: z.string().uuid(),

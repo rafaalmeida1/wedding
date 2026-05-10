@@ -14,8 +14,6 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1).default('redis://localhost:6379'),
 
-  RABBITMQ_URL: z.string().url().default('amqp://guest:guest@localhost:5672/'),
-
   WORKERS_CONCURRENCY: z.coerce.number().int().positive().default(2),
 
   SMTP_HOST: z.string().optional(),

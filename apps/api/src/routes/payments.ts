@@ -18,7 +18,7 @@ import {
   getMpPayment,
   type MpPaymentResponse,
 } from '../services/mercadopago.js';
-import { publishPaymentEvent } from '../rabbitmq/publisher.js';
+import { publishPaymentEvent } from '../jobs/redis-queues.js';
 
 // =============================================================================
 // /api/payments

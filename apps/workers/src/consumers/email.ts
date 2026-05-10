@@ -1,50 +1,24 @@
-import type { ConsumeMessage } from 'amqplib';
-import { EventQueues, emailSendSchema } from '@repo/shared/events';
-import { assertEventQueues, getConnection } from '../services/rabbitmq.js';
+import type { Job } from 'bullmq';
+import { UnrecoverableError } from 'bullmq';
+import { emailSendSchema } from '@repo/shared/events';
 import { sendEmail } from '../services/ses.js';
 import { renderTemplate } from '../templates/index.js';
 
-export async function startEmailConsumer(): Promise<{ disconnect: () => Promise<void> }> {
-  const conn = await getConnection();
-  const ch = await conn.createChannel();
-  await assertEventQueues(ch);
-  await ch.prefetch(1);
+export async function processEmailJob(job: Job): Promise<void> {
+  let event;
+  try {
+    event = emailSendSchema.parse(job.data);
+  } catch {
+    console.warn('[jobs:email] dropping invalid payload', job.id);
+    throw new UnrecoverableError('invalid email event');
+  }
 
-  const { consumerTag } = await ch.consume(
-    EventQueues.EmailSend,
-    async (msg: ConsumeMessage | null) => {
-      if (!msg) return;
-      let event;
-      try {
-        event = emailSendSchema.parse(JSON.parse(msg.content.toString()));
-      } catch {
-        console.warn('[email-consumer] dropping invalid payload');
-        ch.nack(msg, false, false);
-        return;
-      }
-      console.log('[email-consumer]', { to: event.to, template: event.template });
-
-      try {
-        const rendered = renderTemplate(event);
-        await sendEmail({
-          to: event.to,
-          subject: rendered.subject,
-          html: rendered.html,
-          text: rendered.text,
-        });
-        ch.ack(msg);
-      } catch (err) {
-        console.error('[email-consumer]', (err as Error).message);
-        ch.nack(msg, false, true);
-      }
-    },
-    { noAck: false },
-  );
-
-  return {
-    disconnect: async () => {
-      await ch.cancel(consumerTag);
-      await ch.close().catch(() => null);
-    },
-  };
+  console.log('[jobs:email]', { to: event.to, template: event.template });
+  const rendered = renderTemplate(event);
+  await sendEmail({
+    to: event.to,
+    subject: rendered.subject,
+    html: rendered.html,
+    text: rendered.text,
+  });
 }
