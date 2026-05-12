@@ -27,6 +27,8 @@ function clientOrThrow(): S3Client {
     endpoint: r2Endpoint(accountId),
     forcePathStyle: true,
     credentials: { accessKeyId, secretAccessKey },
+    // R2 não implementa x-amz-checksum-crc32 enviado por padrão pelo SDK ≥3.729.
+    requestChecksumCalculation: 'WHEN_REQUIRED',
   });
   return cachedClient;
 }

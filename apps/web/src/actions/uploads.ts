@@ -3,6 +3,7 @@
 import crypto from 'node:crypto';
 import { cookies } from 'next/headers';
 import type { ProductImageUploadResponse } from '@repo/shared/products';
+import { resolveProductImageMimeType } from '@repo/shared';
 import { getCurrentUser } from '@/actions/auth';
 import { resolveSessionUserIdFromCookie } from '@/lib/access-jwt';
 import { productImagePublicUrl, putProductImage } from '@/lib/r2-product-image';
@@ -10,12 +11,6 @@ import { productImagePublicUrl, putProductImage } from '@/lib/r2-product-image';
 export type ProductImageUploadResult =
   | { ok: true; payload: ProductImageUploadResponse }
   | { ok: false; message: string };
-
-const MIME_TO_EXT: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-};
 
 /** Next pode enviar o arquivo como `image` ou (Flight) tipo `1_image`. */
 function getImageFromFormData(formData: FormData): File | null {
@@ -50,23 +45,21 @@ export async function uploadProductImageAction(formData: FormData): Promise<Prod
   if (!file) {
     return { ok: false, message: 'envie um arquivo de imagem' };
   }
-  const contentType = file.type ?? '';
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(contentType)) {
-    return { ok: false, message: 'formato de imagem inválido (use JPG, PNG ou WebP)' };
-  }
-  const ext = MIME_TO_EXT[contentType];
-  if (!ext) {
-    return { ok: false, message: 'tipo MIME não aceito' };
-  }
   if (file.size > 8 * 1024 * 1024) {
     return { ok: false, message: 'imagem deve ter no máximo 8MB' };
   }
+
+  const buf = Buffer.from(await file.arrayBuffer());
+  const resolved = resolveProductImageMimeType(file.type, buf);
+  if (!resolved) {
+    return { ok: false, message: 'formato de imagem inválido (use JPG, PNG ou WebP)' };
+  }
+  const { contentType, ext } = resolved;
 
   const id = crypto.randomUUID();
   const key = `products/${userId}/${id}.${ext}`;
 
   try {
-    const buf = Buffer.from(await file.arrayBuffer());
     await putProductImage({ key, body: buf, contentType });
     const publicUrl = productImagePublicUrl(key);
     return { ok: true, payload: { publicUrl, key } };

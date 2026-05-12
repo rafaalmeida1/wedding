@@ -82,7 +82,7 @@ importers:
   apps/web:
     dependencies:
       '@aws-sdk/client-s3':
-        specifier: ^3.1045.0
+        specifier: ^3.717.0
         version: 3.1045.0
       '@mercadopago/sdk-react':
         specifier: ^1.0.7

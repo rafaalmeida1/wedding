@@ -24,6 +24,8 @@ function client(): S3Client {
         accessKeyId: env.R2_ACCESS_KEY_ID,
         secretAccessKey: env.R2_SECRET_ACCESS_KEY,
       },
+      // Cloudflare R2: PutObject falha com checksum CRC32 opcional do SDK recente.
+      requestChecksumCalculation: 'WHEN_REQUIRED',
     });
   }
   return cachedClient;

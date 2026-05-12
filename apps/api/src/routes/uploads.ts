@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import crypto from 'node:crypto';
+import { resolveProductImageMimeType } from '@repo/shared';
 import {
   putProductImageDirect,
   productImagePublicUrl,
@@ -8,12 +9,6 @@ import {
 import { requireAuth, type AuthContext } from '../middleware/auth.js';
 
 const app = new Hono<AuthContext>();
-
-const MIME_TO_EXT: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-};
 
 const MAX_BYTES = 8 * 1024 * 1024;
 
@@ -35,22 +30,19 @@ app.post('/upload-image', requireAuth, async (c) => {
     throw new HTTPException(400, { message: `imagem deve ter entre 1 e ${MAX_BYTES} bytes` });
   }
 
-  const contentType = blob.type ?? '';
-  if (!['image/jpeg', 'image/png', 'image/webp'].includes(contentType)) {
+  const buf = Buffer.from(await blob.arrayBuffer());
+  const resolved = resolveProductImageMimeType(blob.type, buf);
+  if (!resolved) {
     throw new HTTPException(400, {
       message: 'formato de imagem inválido (use JPG, PNG ou WebP)',
     });
   }
-  const ext = MIME_TO_EXT[contentType];
-  if (!ext) {
-    throw new HTTPException(400, { message: 'tipo MIME não aceito' });
-  }
+  const { contentType, ext } = resolved;
 
   const id = crypto.randomUUID();
   const key = `products/${auth.sub}/${id}.${ext}`;
 
   try {
-    const buf = Buffer.from(await blob.arrayBuffer());
     await putProductImageDirect({ key, body: buf, contentType });
   } catch (err) {
     console.error('[upload-image]', err);
