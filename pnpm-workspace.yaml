@@ -1,3 +1,10 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# pnpm 10+: scripts de install/build só rodam para dependências aprovadas.
+# Sem isto aparece "Ignored build scripts" e binários nativos (esbuild, etc.) podem faltar.
+allowBuilds:
+  esbuild: true
+  msgpackr-extract: true
+  unrs-resolver: true
