@@ -42,6 +42,15 @@ try {
 const nextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@repo/shared'],
+  webpack: (config) => {
+    // @repo/shared uses NodeNext-style `.js` specifiers on `.ts` sources; map them for webpack.
+    config.resolve.extensionAlias = {
+      ...config.resolve.extensionAlias,
+      '.js': ['.ts', '.tsx', '.js'],
+      '.mjs': ['.mts', '.mjs'],
+    };
+    return config;
+  },
   images: {
     remotePatterns,
   },
