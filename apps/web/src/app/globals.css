@@ -45,6 +45,7 @@ body {
 }
 
 /* Mercado Pago Payment Brick — evita estourar a largura no mobile (scroll local se precisar) */
+#gift-payment-brick-host,
 #gift-payment-brick {
   width: 100%;
   min-width: 0;

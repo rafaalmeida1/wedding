@@ -18,7 +18,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
-import { Loader2, ArrowLeft, ExternalLink, Copy, Check } from 'lucide-react';
+import { Lock, ArrowLeft, ExternalLink, Copy, Check } from 'lucide-react';
 // O `IPaymentBrickCustomization` não é re-exportado pelo entry principal do
 // `@mercadopago/sdk-react`, mas o pacote não tem campo `exports` então o deep
 // import via subpath é suportado.
@@ -32,13 +32,106 @@ import { detectPaymentMethod } from '@repo/shared/payments';
 import { apiClient, ApiError } from '@/lib/api-client';
 import { initMP } from '@/lib/mercadopago-client';
 import { formatBRL } from '@/lib/format';
+import { cn } from '@/lib/cn';
 import { PaymentFlow, type FlowState } from '@/components/payment/PaymentFlow';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
+
+/** Placeholder enquanto o chunk JS do SDK ou o Brick interno ainda não montou (evita “card vazio”). */
+function MercadoPagoBrickSkeleton({ className }: { className?: string }) {
+  const reduceMotion = useReducedMotion();
+  const rows = [
+    { hint: 'Cartão', w: '88%' },
+    { hint: 'Caixa', w: '72%' },
+    { hint: 'PIX', w: '45%' },
+    { hint: 'Boleto', w: '62%' },
+  ];
+  return (
+    <div
+      className={cn(
+        'flex min-h-[280px] flex-col rounded-2xl bg-gradient-to-b from-white via-rose-50/25 to-white px-4 py-7 sm:min-h-[308px] sm:rounded-3xl sm:px-5 sm:py-8',
+        className,
+      )}
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="flex flex-col items-center text-center">
+        <div className="relative">
+          <motion.div
+            className="flex h-[3.25rem] w-[3.25rem] items-center justify-center rounded-2xl bg-gradient-to-br from-rose-100 to-rose-50 shadow-inner"
+            animate={{ scale: [1, 1.05, 1] }}
+            transition={
+              reduceMotion
+                ? { duration: 0 }
+                : { duration: 2.2, repeat: Infinity, ease: 'easeInOut' }
+            }
+          >
+            <Lock className="h-6 w-6 text-rose-600" strokeWidth={2} />
+          </motion.div>
+          <motion.div
+            className="pointer-events-none absolute -inset-2 rounded-[1.15rem] border-2 border-rose-400/35"
+            animate={{ opacity: [0.25, 0.65, 0.25], scale: [1, 1.06, 1] }}
+            transition={
+              reduceMotion
+                ? { duration: 0 }
+                : { duration: 2.2, repeat: Infinity, ease: 'easeInOut' }
+            }
+          />
+        </div>
+        <p className="mt-5 text-sm font-semibold text-ink">Preparando o checkout</p>
+        <p className="mt-1.5 max-w-[17.5rem] text-xs leading-relaxed text-ink-mute">
+          Conexão segura com o Mercado Pago — carregando cartão, PIX, boleto e Caixa.
+        </p>
+      </div>
+      <ul className="mt-8 flex flex-col gap-2.5" aria-hidden>
+        {rows.map((row, i) => (
+          <li
+            key={row.hint}
+            className="flex items-center gap-3 rounded-xl border border-rose-100/95 bg-white/98 px-3 py-3 shadow-[0_2px_12px_-4px_rgba(194,24,91,0.12)]"
+          >
+            <div className="h-4 w-4 shrink-0 rounded-full border-2 border-rose-200/90 bg-white" />
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-[10px] font-bold uppercase text-rose-400/90">
+              {row.hint.slice(0, 2)}
+            </div>
+            <div className="min-w-0 flex-1 space-y-2 py-0.5">
+              <motion.div
+                className="h-3 rounded-md bg-rose-100"
+                style={{ maxWidth: row.w }}
+                animate={{ opacity: [0.45, 1, 0.45] }}
+                transition={
+                  reduceMotion
+                    ? { duration: 0 }
+                    : {
+                        duration: 1.45,
+                        repeat: Infinity,
+                        delay: i * 0.12,
+                        ease: 'easeInOut',
+                      }
+                }
+              />
+              {i === 0 ? (
+                <motion.div
+                  className="h-2.5 w-24 rounded bg-rose-50/90"
+                  animate={{ opacity: [0.5, 0.95, 0.5] }}
+                  transition={
+                    reduceMotion
+                      ? { duration: 0 }
+                      : { duration: 1.45, repeat: Infinity, delay: 0.15, ease: 'easeInOut' }
+                  }
+                />
+              ) : null}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 // Carregamos o Brick com SSR desabilitado para evitar acessar `window` no servidor.
 const PaymentBrick = dynamic(
   () => import('@mercadopago/sdk-react').then((mod) => mod.Payment),
-  { ssr: false, loading: () => <BrickFallback /> },
+  { ssr: false, loading: () => <MercadoPagoBrickSkeleton /> },
 );
 
 interface GiftCheckoutProps {
@@ -539,6 +632,32 @@ interface BrickStepProps {
 }
 
 function BrickStep({ amountCents, payer, onSubmit, onBack, error }: BrickStepProps) {
+  const initKey = useMemo(
+    () => `${amountCents}|${payer.email}|${payer.name}`,
+    [amountCents, payer.email, payer.name],
+  );
+
+  const [brickReady, setBrickReady] = useState(false);
+
+  useEffect(() => {
+    setBrickReady(false);
+  }, [initKey]);
+
+  useEffect(() => {
+    if (brickReady) return;
+    const id = window.setTimeout(() => setBrickReady(true), 16000);
+    return () => window.clearTimeout(id);
+  }, [brickReady, initKey]);
+
+  const handleBrickReady = useCallback(() => {
+    setBrickReady(true);
+  }, []);
+
+  const handleBrickError = useCallback((err: unknown) => {
+    setBrickReady(true);
+    console.error('[mp-brick] error', err);
+  }, []);
+
   const initialization = useMemo(
     () => ({
       amount: amountCents / 100,
@@ -564,14 +683,13 @@ function BrickStep({ amountCents, payer, onSubmit, onBack, error }: BrickStepPro
         hideFormTitle: true,
         hideRedirectionPanel: true,
         style: {
-          /* `flat` evita painéis muito escuros que o tema default às vezes aplica em sub-formulários (ex.: e-mail PIX). */
-          theme: 'flat',
+          /* Bootstrap tende a listas mais claras e radio bem definidos no mobile */
+          theme: 'bootstrap',
           customVariables: {
             baseColor: '#C2185B',
             baseColorFirstVariant: '#D5497F',
-            baseColorSecondVariant: '#FFF1F5',
+            baseColorSecondVariant: '#FFF5F7',
             secondaryColor: '#5c5466',
-            /* Fundo explícito claro — evita inputs “filled” escuros */
             formBackgroundColor: '#FFFFFF',
             inputBackgroundColor: '#FFFFFF',
             textPrimaryColor: '#1F1B24',
@@ -587,14 +705,14 @@ function BrickStep({ amountCents, payer, onSubmit, onBack, error }: BrickStepPro
             fontSizeLarge: '15px',
             fontSizeExtraLarge: '16px',
             borderRadiusSmall: '10px',
-            borderRadiusMedium: '12px',
-            borderRadiusLarge: '16px',
-            formPadding: '12px',
+            borderRadiusMedium: '14px',
+            borderRadiusLarge: '18px',
+            formPadding: '16px',
             inputVerticalPadding: '14px',
             inputHorizontalPadding: '14px',
             inputBorderWidth: '1px',
             inputFocusedBorderWidth: '2px',
-            inputFocusedBoxShadow: '0 0 0 3px rgba(194, 24, 91, 0.15)',
+            inputFocusedBoxShadow: '0 0 0 3px rgba(194, 24, 91, 0.14)',
           },
         },
       },
@@ -630,31 +748,38 @@ function BrickStep({ amountCents, payer, onSubmit, onBack, error }: BrickStepPro
         </p>
       ) : null}
 
-      <div className="mp-brick-shell w-full min-w-0 overflow-x-auto rounded-2xl border border-rose-100/90 bg-white px-3 py-4 shadow-soft sm:rounded-3xl sm:px-4 sm:py-6 [-webkit-overflow-scrolling:touch]">
-        <PaymentBrick
-          id="gift-payment-brick"
-          locale="pt"
-          initialization={initialization}
-          customization={customization}
-          onSubmit={async ({ formData }) => {
-            await onSubmit(formData as BrickFormData);
-          }}
-          onError={(err: unknown) => {
-            console.error('[mp-brick] error', err);
-          }}
-        />
+      <div
+        className="relative min-h-[280px] w-full min-w-0 overflow-x-auto rounded-2xl border border-rose-100/75 bg-white shadow-[0_14px_48px_-22px_rgba(194,24,91,0.2)] ring-1 ring-rose-50/90 sm:min-h-[308px] sm:rounded-3xl [-webkit-overflow-scrolling:touch]"
+        id="gift-payment-brick-host"
+      >
+        <div className="min-w-0 px-1 py-1 sm:px-2 sm:py-2">
+          <PaymentBrick
+            id="gift-payment-brick"
+            locale="pt"
+            initialization={initialization}
+            customization={customization}
+            onReady={handleBrickReady}
+            onSubmit={async ({ formData }) => {
+              await onSubmit(formData as BrickFormData);
+            }}
+            onError={handleBrickError}
+          />
+        </div>
+        <motion.div
+          className={cn(
+            'absolute inset-0 z-[6] flex flex-col rounded-2xl bg-gradient-to-b from-white/96 via-white/94 to-rose-50/30 sm:rounded-3xl',
+            brickReady ? 'pointer-events-none' : 'pointer-events-auto',
+          )}
+          initial={false}
+          animate={{ opacity: brickReady ? 0 : 1 }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          aria-hidden={brickReady}
+        >
+          <div className="flex min-h-0 flex-1 flex-col p-2 sm:p-3">
+            <MercadoPagoBrickSkeleton className="min-h-0 flex-1 border border-rose-100/60 shadow-inner shadow-rose-100/30" />
+          </div>
+        </motion.div>
       </div>
-    </div>
-  );
-}
-
-function BrickFallback() {
-  return (
-    <div className="grid place-items-center rounded-2xl border border-dashed border-rose-200 bg-white/70 px-4 py-14 sm:rounded-3xl sm:py-16">
-      <Loader2 className="h-7 w-7 animate-spin text-rose-500" strokeWidth={2.25} />
-      <p className="mt-4 max-w-xs text-center text-sm leading-relaxed text-ink-mute">
-        Carregando o checkout seguro do Mercado Pago...
-      </p>
     </div>
   );
 }
