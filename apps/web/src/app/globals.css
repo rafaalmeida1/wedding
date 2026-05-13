@@ -32,7 +32,7 @@ body {
            bg-white/70 px-6 py-3 text-ink transition hover:bg-rose-50;
   }
   .input-field {
-    @apply w-full rounded-xl border border-rose-100 bg-white/80 px-4 py-3 text-ink
+    @apply w-full rounded-xl border border-rose-100 bg-white/80 px-4 py-3 text-base text-ink
            placeholder-ink-mute outline-none transition
            focus:border-rose-400 focus:ring-2 focus:ring-rose-200;
   }

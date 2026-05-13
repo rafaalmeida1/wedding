@@ -33,30 +33,44 @@ export function ReceiptSheet({
     <motion.div
       role="region"
       aria-label="Comprovante de presente"
-      className="rounded-3xl bg-white shadow-bloom"
-      initial={{ y: 80, opacity: 0, scale: 0.96 }}
-      animate={{ y: 0, opacity: 1, scale: 1 }}
-      transition={{ type: 'spring', stiffness: 220, damping: 22 }}
+      className="max-h-[min(88dvh,40rem)] overflow-y-auto overscroll-contain rounded-t-[1.75rem] border border-rose-100/80 bg-white shadow-bloom sm:max-h-none sm:rounded-3xl"
+      style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}
+      initial={{ y: 48, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 260, damping: 28 }}
     >
-      <div className="border-b border-rose-100 bg-rose-50/60 px-6 py-5 text-center">
-        <p className="label-eyebrow">Presente registrado</p>
-        <h3 className="mt-1 font-serif text-3xl text-ink">Obrigado, {payerName}!</h3>
+      <div className="flex justify-center pt-3 sm:hidden" aria-hidden>
+        <span className="h-1 w-10 shrink-0 rounded-full bg-rose-200/90" />
       </div>
-      <dl className="grid grid-cols-2 gap-y-4 px-6 py-6 text-sm">
+      <div className="relative overflow-hidden border-b border-rose-100/90 bg-gradient-to-br from-rose-50 via-white to-rose-50/40 px-5 py-6 text-center sm:rounded-t-3xl sm:px-8 sm:py-7">
+        <div className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full bg-rose-200/30 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-8 -left-8 h-24 w-24 rounded-full bg-rose-300/20 blur-2xl" />
+        <p className="label-eyebrow relative">Presente registrado</p>
+        <h3 className="relative mt-2 font-serif text-2xl leading-tight text-ink sm:text-3xl">
+          Obrigado, {payerName}!
+        </h3>
+      </div>
+      <dl className="grid grid-cols-1 gap-5 px-5 py-6 text-sm sm:grid-cols-2 sm:gap-x-6 sm:gap-y-5 sm:px-8 sm:py-7">
         <Row label="Presente">{productName}</Row>
         <Row label="Valor">{formatBRL(amountCents)}</Row>
         <Row label="Método">{METHOD_LABEL[paymentMethod]}</Row>
         <Row label="Data">{formatDateTime(new Date())}</Row>
-        <div className="col-span-2 mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs text-ink-mute">
-          <span className="font-mono">{paymentIntentId}</span>
+        <div className="sm:col-span-2">
+          <dt className="text-xs uppercase tracking-wider text-ink-mute">Referência</dt>
+          <dd className="mt-2 break-all rounded-xl bg-rose-50/90 px-3 py-2.5 font-mono text-[11px] leading-relaxed text-ink-mute sm:text-xs">
+            {paymentIntentId}
+          </dd>
         </div>
       </dl>
-      <div className="border-t border-rose-100 px-6 py-5 text-center">
-        <p className="text-sm text-ink-mute">
+      <div className="border-t border-rose-100/90 px-5 py-6 text-center sm:px-8 sm:py-7">
+        <p className="text-sm leading-relaxed text-ink-mute">
           Sua mensagem foi enviada ao casal junto com o presente.
         </p>
-        <Link href="/" className="btn-ghost mt-4 inline-flex">
-          <Heart className="h-4 w-4 text-rose-600" /> Voltar ao início
+        <Link
+          href="/"
+          className="btn-ghost mx-auto mt-5 inline-flex min-h-12 justify-center px-8"
+        >
+          <Heart className="h-4 w-4 shrink-0 text-rose-600" /> Voltar ao início
         </Link>
       </div>
     </motion.div>
@@ -65,9 +79,9 @@ export function ReceiptSheet({
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div>
-      <dt className="text-xs uppercase tracking-wider text-ink-mute">{label}</dt>
-      <dd className="mt-1 font-medium text-ink">{children}</dd>
+    <div className="min-w-0">
+      <dt className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-mute">{label}</dt>
+      <dd className="mt-1.5 break-words text-base font-medium leading-snug text-ink">{children}</dd>
     </div>
   );
 }

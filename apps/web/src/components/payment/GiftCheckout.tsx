@@ -67,6 +67,20 @@ export function GiftCheckout(props: GiftCheckoutProps) {
   const [flowState, setFlowState] = useState<FlowState>('idle');
   const celebrationLockRef = useRef(false);
   const receiptDelayRef = useRef<ReturnType<typeof setTimeout> | undefined>();
+  const checkoutRef = useRef<HTMLDivElement>(null);
+
+  /** Scroll suave até o bloco do checkout quando o fluxo muda (overlay, resultado, Brick). */
+  const scrollCheckoutIntoView = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.requestAnimationFrame(() => {
+      checkoutRef.current?.scrollIntoView({
+        behavior: smooth ? 'smooth' : 'auto',
+        block: 'start',
+        inline: 'nearest',
+      });
+    });
+  }, []);
 
   /** Evita replay da animação (Strict Mode ou double poll) e faz approved → receipt. */
   const startCelebrationSequence = useCallback(() => {
@@ -84,6 +98,14 @@ export function GiftCheckout(props: GiftCheckoutProps) {
   useEffect(() => {
     if (step === 'pay') initMP();
   }, [step]);
+
+  useEffect(() => {
+    if (flowState !== 'idle') scrollCheckoutIntoView();
+  }, [flowState, scrollCheckoutIntoView]);
+
+  useEffect(() => {
+    if (step === 'pay' || step === 'result') scrollCheckoutIntoView();
+  }, [step, scrollCheckoutIntoView]);
 
   function handleIdentify(e: React.FormEvent) {
     e.preventDefault();
@@ -171,38 +193,24 @@ export function GiftCheckout(props: GiftCheckoutProps) {
       />
     ) : null;
 
-  if (step === 'identify') {
-    return (
-      <>
-        <IdentifyForm
-          amountCents={props.amountCents}
-          payer={payer}
-          onChange={setPayer}
-          onSubmit={handleIdentify}
-          error={error}
-        />
-        {paymentOverlay}
-      </>
-    );
-  }
-
-  if (step === 'pay') {
-    return (
-      <>
-        <BrickStep
-          amountCents={props.amountCents}
-          payer={payer}
-          onSubmit={handleSubmitBrick}
-          onBack={handleBack}
-          error={error}
-        />
-        {paymentOverlay}
-      </>
-    );
-  }
-
-  return (
-    <>
+  const main =
+    step === 'identify' ? (
+      <IdentifyForm
+        amountCents={props.amountCents}
+        payer={payer}
+        onChange={setPayer}
+        onSubmit={handleIdentify}
+        error={error}
+      />
+    ) : step === 'pay' ? (
+      <BrickStep
+        amountCents={props.amountCents}
+        payer={payer}
+        onSubmit={handleSubmitBrick}
+        onBack={handleBack}
+        error={error}
+      />
+    ) : (
       <ResultStep
         result={result!}
         productName={props.productName}
@@ -211,8 +219,17 @@ export function GiftCheckout(props: GiftCheckoutProps) {
         onBack={handleBack}
         onApprovedCelebration={startCelebrationSequence}
       />
+    );
+
+  return (
+    <div
+      ref={checkoutRef}
+      className="scroll-mt-4 outline-none sm:scroll-mt-6"
+      tabIndex={-1}
+    >
+      {main}
       {paymentOverlay}
-    </>
+    </div>
   );
 }
 
@@ -230,13 +247,22 @@ interface IdentifyFormProps {
 
 function IdentifyForm({ amountCents, payer, onChange, onSubmit, error }: IdentifyFormProps) {
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
-      <div>
+    <form onSubmit={onSubmit} className="space-y-5 sm:space-y-6">
+      <header>
         <p className="label-eyebrow">Você está a um passo</p>
-        <h2 className="mt-1 font-serif text-3xl text-ink">Quem está presenteando?</h2>
-      </div>
+        <h2 className="mt-2 font-serif text-2xl leading-tight tracking-tight text-ink sm:text-3xl md:text-[2rem]">
+          Quem está presenteando?
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-ink-mute sm:text-[15px]">
+          Os dados aparecem no comprovante do casal e são exigidos pelo Mercado Pago para PIX e
+          boleto.
+        </p>
+      </header>
       {error ? (
-        <p className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <p
+          role="alert"
+          className="rounded-2xl border border-rose-200/90 bg-rose-50 px-4 py-3 text-sm leading-relaxed text-rose-800"
+        >
           {error}
         </p>
       ) : null}
@@ -265,19 +291,19 @@ function IdentifyForm({ amountCents, payer, onChange, onSubmit, error }: Identif
         required
       />
       <div>
-        <label className="text-sm text-ink-soft" htmlFor="payerMessage">
+        <label className="text-sm font-medium text-ink-soft" htmlFor="payerMessage">
           Mensagem para o casal (opcional)
         </label>
         <textarea
           id="payerMessage"
           rows={3}
-          className="input-field mt-1"
+          className="input-field mt-2 min-h-[5.5rem] resize-y"
           value={payer.message}
           onChange={(e) => onChange({ ...payer, message: e.target.value })}
           placeholder="Felicidades para vocês!"
         />
       </div>
-      <button type="submit" className="btn-primary w-full">
+      <button type="submit" className="btn-primary min-h-12 w-full text-base shadow-[0_12px_36px_-16px_rgba(194,24,91,0.45)]">
         Continuar para o pagamento — {formatBRL(amountCents)}
       </button>
     </form>
@@ -293,13 +319,13 @@ type FieldProps = {
 
 function Field({ id, label, value, onChange, ...rest }: FieldProps) {
   return (
-    <div>
-      <label className="text-sm text-ink-soft" htmlFor={id}>
+    <div className="space-y-2">
+      <label className="block text-sm font-medium text-ink-soft" htmlFor={id}>
         {label}
       </label>
       <input
         id={id}
-        className="input-field mt-1"
+        className="input-field min-h-12"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         {...rest}
@@ -370,29 +396,35 @@ function BrickStep({ amountCents, payer, onSubmit, onBack, error }: BrickStepPro
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6 sm:space-y-7">
       <button
         type="button"
         onClick={onBack}
-        className="inline-flex items-center gap-1 text-sm text-ink-mute hover:text-rose-600"
+        className="inline-flex min-h-11 items-center gap-2 rounded-full py-1.5 pl-1 pr-3 text-sm font-medium text-ink-mute transition hover:bg-white/80 hover:text-rose-700 active:scale-[0.99]"
       >
-        <ArrowLeft className="h-4 w-4" /> Voltar
+        <ArrowLeft className="h-4 w-4 shrink-0" /> Voltar
       </button>
-      <div>
+      <header>
         <p className="label-eyebrow">Pagamento</p>
-        <h2 className="mt-1 font-serif text-3xl text-ink">Finalize com segurança</h2>
-        <p className="mt-1 text-sm text-ink-mute">
-          Aceitamos cartão, PIX, boleto e débito virtual Caixa via Mercado Pago.
+        <h2 className="mt-2 font-serif text-2xl leading-tight text-ink sm:text-3xl md:text-[2rem]">
+          Finalize com segurança
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-ink-mute sm:text-[15px]">
+          Cartão, PIX, boleto e débito virtual Caixa — processado com criptografia pelo Mercado
+          Pago.
         </p>
-      </div>
+      </header>
 
       {error ? (
-        <p className="rounded-lg border border-rose-300 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <p
+          role="alert"
+          className="rounded-2xl border border-rose-200/90 bg-rose-50 px-4 py-3 text-sm leading-relaxed text-rose-800"
+        >
           {error}
         </p>
       ) : null}
 
-      <div className="rounded-2xl border border-rose-100 bg-white/80 p-4">
+      <div className="rounded-2xl border border-rose-100/90 bg-gradient-to-b from-white to-rose-50/20 p-3 shadow-soft sm:rounded-3xl sm:p-5 md:p-6">
         <PaymentBrick
           initialization={initialization}
           customization={customization}
@@ -410,9 +442,11 @@ function BrickStep({ amountCents, payer, onSubmit, onBack, error }: BrickStepPro
 
 function BrickFallback() {
   return (
-    <div className="grid place-items-center rounded-2xl border border-rose-100 bg-white/60 px-4 py-12">
-      <Loader2 className="h-5 w-5 animate-spin text-rose-500" />
-      <p className="mt-2 text-sm text-ink-mute">Carregando o checkout do Mercado Pago...</p>
+    <div className="grid place-items-center rounded-2xl border border-dashed border-rose-200 bg-white/70 px-4 py-14 sm:rounded-3xl sm:py-16">
+      <Loader2 className="h-7 w-7 animate-spin text-rose-500" strokeWidth={2.25} />
+      <p className="mt-4 max-w-xs text-center text-sm leading-relaxed text-ink-mute">
+        Carregando o checkout seguro do Mercado Pago...
+      </p>
     </div>
   );
 }
@@ -520,13 +554,13 @@ function ResultStep({
   }
 
   return (
-    <div className="space-y-4">
-      <h2 className="font-serif text-2xl text-ink">Aguardando confirmação</h2>
-      <p className="text-sm text-ink-mute">
+    <div className="space-y-6 sm:space-y-7">
+      <h2 className="font-serif text-xl text-ink sm:text-2xl">Aguardando confirmação</h2>
+      <p className="text-sm leading-relaxed text-ink-mute sm:text-base">
         Estamos confirmando o pagamento. Pode levar alguns instantes — você não precisa fechar
         esta página.
       </p>
-      <button onClick={onBack} className="btn-ghost mt-4 inline-flex">
+      <button onClick={onBack} className="btn-ghost mt-2 inline-flex min-h-12 w-full justify-center sm:w-auto">
         Tentar outro método
       </button>
     </div>
@@ -546,38 +580,63 @@ function PixCard({
 }) {
   const [copied, setCopied] = useState(false);
   const [userMarkedPaid, setUserMarkedPaid] = useState(false);
+  const confirmRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!userMarkedPaid) return;
+    const smooth = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.requestAnimationFrame(() => {
+      confirmRef.current?.scrollIntoView({
+        behavior: smooth ? 'smooth' : 'auto',
+        block: 'nearest',
+      });
+    });
+  }, [userMarkedPaid]);
+
   async function copy() {
     await navigator.clipboard.writeText(pix.qrCode);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   }
   return (
-    <div className="space-y-4">
-      <p className="label-eyebrow">PIX gerado</p>
-      <h2 className="font-serif text-3xl text-ink">Escaneie para pagar</h2>
-      <p className="text-sm text-ink-mute">
-        {productName} — {formatBRL(amountCents)}. A confirmação chega em segundos depois do pagamento.
-      </p>
-      <div className="grid place-items-center rounded-2xl border border-rose-100 bg-white p-4">
+    <div className="space-y-6 sm:space-y-7">
+      <header>
+        <p className="label-eyebrow">PIX gerado</p>
+        <h2 className="mt-2 font-serif text-2xl leading-tight text-ink sm:text-3xl">
+          Escaneie para pagar
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-ink-mute sm:text-[15px]">
+          <span className="font-medium text-ink">{productName}</span>
+          <span className="text-ink-mute"> — {formatBRL(amountCents)}</span>
+          <span className="block mt-1 text-ink-mute">
+            A confirmação chega em segundos depois que o PIX cair.
+          </span>
+        </p>
+      </header>
+      <div className="grid place-items-center overflow-hidden rounded-2xl border border-rose-100/90 bg-white p-4 shadow-soft sm:rounded-3xl sm:p-6">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={`data:image/png;base64,${pix.qrCodeBase64}`}
           alt="QR Code PIX"
           width={260}
           height={260}
-          className="rounded-xl"
+          className="h-auto w-full max-w-[min(18rem,100%)] rounded-xl sm:max-w-[16.25rem]"
         />
       </div>
       <div>
-        <label className="text-sm text-ink-soft">Copia e cola</label>
-        <div className="mt-1 flex items-center gap-2">
+        <label className="text-sm font-medium text-ink-soft">Copia e cola</label>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-stretch">
           <input
             readOnly
-            className="input-field flex-1 font-mono text-xs"
+            className="input-field min-h-12 flex-1 font-mono text-xs sm:text-sm"
             value={pix.qrCode}
             onFocus={(e) => e.currentTarget.select()}
           />
-          <button onClick={copy} type="button" className="btn-ghost">
+          <button
+            onClick={copy}
+            type="button"
+            className="btn-ghost inline-flex min-h-12 shrink-0 justify-center sm:px-5"
+          >
             {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
             {copied ? 'Copiado' : 'Copiar'}
           </button>
@@ -585,41 +644,45 @@ function PixCard({
       </div>
       {userMarkedPaid ? (
         <div
-          className="rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-3"
+          ref={confirmRef}
+          className="rounded-2xl border border-rose-200/90 bg-gradient-to-br from-rose-50 to-white px-4 py-4 sm:px-5"
           role="status"
           aria-live="polite"
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 sm:gap-4">
             <motion.span
-              className="h-10 w-10 shrink-0 rounded-full border-2 border-rose-500 border-t-transparent"
+              className="h-11 w-11 shrink-0 rounded-full border-2 border-rose-500 border-t-transparent"
               animate={{ rotate: 360 }}
-              transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
+              transition={{ duration: 0.85, repeat: Infinity, ease: 'linear' }}
               aria-hidden
             />
-            <div>
-              <p className="font-medium text-ink">Processando pagamento</p>
-              <p className="text-xs text-ink-mute">
-                Confirmando com o Mercado Pago e o banco. Isso costuma levar alguns segundos.
+            <div className="min-w-0">
+              <p className="font-semibold text-ink">Processando pagamento</p>
+              <p className="mt-1 text-xs leading-relaxed text-ink-mute sm:text-sm">
+                Confirmando com o Mercado Pago e o banco. Isso costuma levar só alguns segundos.
               </p>
             </div>
           </div>
         </div>
       ) : (
-        <>
-          <p className="text-xs text-ink-mute">
-            Depois de pagar pelo app do banco, toque abaixo para acompanharmos a confirmação. Você
-            também pode fechar a página — enviaremos um e-mail quando o PIX entrar.
+        <div className="space-y-3">
+          <p className="text-xs leading-relaxed text-ink-mute sm:text-sm">
+            Depois de pagar no app do banco, toque abaixo para acompanharmos a confirmação. Você
+            também pode fechar a página — enviaremos um e-mail quando o PIX for confirmado.
           </p>
           <button
             type="button"
             onClick={() => setUserMarkedPaid(true)}
-            className="btn-primary w-full text-sm"
+            className="btn-primary min-h-12 w-full text-[15px] shadow-[0_12px_36px_-16px_rgba(194,24,91,0.45)]"
           >
             Já paguei o PIX
           </button>
-        </>
+        </div>
       )}
-      <button onClick={onBack} className="btn-ghost inline-flex text-sm">
+      <button
+        onClick={onBack}
+        className="btn-ghost inline-flex min-h-11 w-full justify-center text-sm sm:w-auto"
+      >
         <ArrowLeft className="h-4 w-4" /> Voltar
       </button>
     </div>
@@ -638,32 +701,38 @@ function BoletoCard({
   onBack: () => void;
 }) {
   return (
-    <div className="space-y-4">
-      <p className="label-eyebrow">Boleto gerado</p>
-      <h2 className="font-serif text-3xl text-ink">Pague o boleto</h2>
-      <p className="text-sm text-ink-mute">
-        {productName} — {formatBRL(amountCents)}. A confirmação leva 1–3 dias úteis.
-      </p>
+    <div className="space-y-6 sm:space-y-7">
+      <header>
+        <p className="label-eyebrow">Boleto gerado</p>
+        <h2 className="mt-2 font-serif text-2xl leading-tight text-ink sm:text-3xl">Pague o boleto</h2>
+        <p className="mt-2 text-sm leading-relaxed text-ink-mute sm:text-[15px]">
+          <span className="font-medium text-ink">{productName}</span> — {formatBRL(amountCents)}. A
+          confirmação leva em geral 1–3 dias úteis.
+        </p>
+      </header>
       <a
         href={boleto.ticketUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="btn-primary inline-flex"
+        className="btn-primary inline-flex min-h-12 w-full justify-center text-[15px] shadow-[0_12px_36px_-16px_rgba(194,24,91,0.45)]"
       >
-        <ExternalLink className="h-4 w-4" /> Abrir boleto
+        <ExternalLink className="h-4 w-4 shrink-0" /> Abrir boleto
       </a>
       {boleto.barcode ? (
         <div>
-          <label className="text-sm text-ink-soft">Linha digitável</label>
+          <label className="text-sm font-medium text-ink-soft">Linha digitável</label>
           <input
             readOnly
-            className="input-field mt-1 font-mono text-xs"
+            className="input-field mt-2 min-h-12 font-mono text-xs sm:text-sm"
             value={boleto.barcode}
             onFocus={(e) => e.currentTarget.select()}
           />
         </div>
       ) : null}
-      <button onClick={onBack} className="btn-ghost inline-flex text-sm">
+      <button
+        onClick={onBack}
+        className="btn-ghost inline-flex min-h-11 w-full justify-center text-sm sm:w-auto"
+      >
         <ArrowLeft className="h-4 w-4" /> Voltar
       </button>
     </div>
@@ -682,22 +751,29 @@ function DebitCaixaCard({
   onBack: () => void;
 }) {
   return (
-    <div className="space-y-4">
-      <p className="label-eyebrow">Débito virtual Caixa</p>
-      <h2 className="font-serif text-3xl text-ink">Conclua no app Caixa</h2>
-      <p className="text-sm text-ink-mute">
-        {productName} — {formatBRL(amountCents)}. Abra o link abaixo no celular onde você usa o app
-        da Caixa para finalizar.
-      </p>
+    <div className="space-y-6 sm:space-y-7">
+      <header>
+        <p className="label-eyebrow">Débito virtual Caixa</p>
+        <h2 className="mt-2 font-serif text-2xl leading-tight text-ink sm:text-3xl">
+          Conclua no app Caixa
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-ink-mute sm:text-[15px]">
+          <span className="font-medium text-ink">{productName}</span> — {formatBRL(amountCents)}.
+          Abra o link no celular em que você usa o app da Caixa para finalizar.
+        </p>
+      </header>
       <a
         href={info.ticketUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="btn-primary inline-flex"
+        className="btn-primary inline-flex min-h-12 w-full justify-center text-[15px] shadow-[0_12px_36px_-16px_rgba(194,24,91,0.45)]"
       >
-        <ExternalLink className="h-4 w-4" /> Abrir débito Caixa
+        <ExternalLink className="h-4 w-4 shrink-0" /> Abrir débito Caixa
       </a>
-      <button onClick={onBack} className="btn-ghost inline-flex text-sm">
+      <button
+        onClick={onBack}
+        className="btn-ghost inline-flex min-h-11 w-full justify-center text-sm sm:w-auto"
+      >
         <ArrowLeft className="h-4 w-4" /> Voltar
       </button>
     </div>
