@@ -43,3 +43,11 @@ body {
     @apply text-xs font-semibold uppercase tracking-[0.18em] text-rose-600;
   }
 }
+
+/* Mercado Pago Payment Brick — evita estourar a largura no mobile (scroll local se precisar) */
+#gift-payment-brick {
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}

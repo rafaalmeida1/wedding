@@ -2,11 +2,11 @@
 
 // Checkout transparente — Mercado Pago (Payment Brick).
 //
-// Fluxo:
-//   1. Tela "identify" — coletamos nome, e-mail, CPF e mensagem do pagador.
-//   2. Tela "pay"      — renderizamos o Payment Brick (cartão de crédito,
-//                         débito, PIX, boleto e débito virtual Caixa).
-//   3. Tela "result"   — após o submit:
+// Fluxo por etapas (checkout):
+//   0. "product"  — resumo: foto, casal, presente, valor → continuar
+//   1. "identify" — dados do pagador
+//   2. "pay"       — Payment Brick (MP)
+//   3. "result"    — PIX / boleto / Caixa / sucesso
 //                         - cartão aprovado → overlay confirmação + recibo
 //                         - PIX             → QR + polling → mesma celebração ao aprovar
 //                         - boleto/débito   → mesmo padrão após polling
@@ -17,6 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import { Loader2, ArrowLeft, ExternalLink, Copy, Check } from 'lucide-react';
 // O `IPaymentBrickCustomization` não é re-exportado pelo entry principal do
 // `@mercadopago/sdk-react`, mas o pacote não tem campo `exports` então o deep
@@ -45,6 +46,9 @@ interface GiftCheckoutProps {
   productId: string;
   productName: string;
   amountCents: number;
+  coupleName: string;
+  productImageUrl: string;
+  productDescription: string | null;
 }
 
 interface PayerData {
@@ -55,7 +59,7 @@ interface PayerData {
 }
 
 export function GiftCheckout(props: GiftCheckoutProps) {
-  const [step, setStep] = useState<'identify' | 'pay' | 'result'>('identify');
+  const [step, setStep] = useState<'product' | 'identify' | 'pay' | 'result'>('product');
   const [payer, setPayer] = useState<PayerData>({
     name: '',
     email: '',
@@ -104,7 +108,8 @@ export function GiftCheckout(props: GiftCheckoutProps) {
   }, [flowState, scrollCheckoutIntoView]);
 
   useEffect(() => {
-    if (step === 'pay' || step === 'result') scrollCheckoutIntoView();
+    if (step === 'product') return;
+    scrollCheckoutIntoView();
   }, [step, scrollCheckoutIntoView]);
 
   function handleIdentify(e: React.FormEvent) {
@@ -173,10 +178,20 @@ export function GiftCheckout(props: GiftCheckoutProps) {
   function handleBack() {
     clearTimeout(receiptDelayRef.current);
     celebrationLockRef.current = false;
-    setStep('identify');
-    setResult(null);
     setError(null);
     setFlowState('idle');
+    if (step === 'result') {
+      setResult(null);
+      setStep('identify');
+      return;
+    }
+    if (step === 'pay') {
+      setStep('identify');
+      return;
+    }
+    if (step === 'identify') {
+      setStep('product');
+    }
   }
 
   // ---------- render --------------------------------------------------------
@@ -193,33 +208,53 @@ export function GiftCheckout(props: GiftCheckoutProps) {
       />
     ) : null;
 
-  const main =
-    step === 'identify' ? (
-      <IdentifyForm
-        amountCents={props.amountCents}
-        payer={payer}
-        onChange={setPayer}
-        onSubmit={handleIdentify}
-        error={error}
-      />
-    ) : step === 'pay' ? (
-      <BrickStep
-        amountCents={props.amountCents}
-        payer={payer}
-        onSubmit={handleSubmitBrick}
-        onBack={handleBack}
-        error={error}
-      />
-    ) : (
-      <ResultStep
-        result={result!}
-        productName={props.productName}
-        payerName={payer.name}
-        amountCents={props.amountCents}
-        onBack={handleBack}
-        onApprovedCelebration={startCelebrationSequence}
-      />
-    );
+  const main = (
+    <>
+      {step !== 'result' ? <CheckoutStepper phase={step} /> : null}
+      {step === 'product' ? (
+        <ProductSummaryStep
+          coupleName={props.coupleName}
+          productName={props.productName}
+          productDescription={props.productDescription}
+          amountCents={props.amountCents}
+          imageUrl={props.productImageUrl}
+          onContinue={() => {
+            setError(null);
+            setStep('identify');
+          }}
+        />
+      ) : step === 'identify' ? (
+        <IdentifyForm
+          amountCents={props.amountCents}
+          payer={payer}
+          onChange={setPayer}
+          onSubmit={handleIdentify}
+          onBack={() => {
+            setError(null);
+            setStep('product');
+          }}
+          error={error}
+        />
+      ) : step === 'pay' ? (
+        <BrickStep
+          amountCents={props.amountCents}
+          payer={payer}
+          onSubmit={handleSubmitBrick}
+          onBack={handleBack}
+          error={error}
+        />
+      ) : (
+        <ResultStep
+          result={result!}
+          productName={props.productName}
+          payerName={payer.name}
+          amountCents={props.amountCents}
+          onBack={handleBack}
+          onApprovedCelebration={startCelebrationSequence}
+        />
+      )}
+    </>
+  );
 
   return (
     <div
@@ -234,7 +269,99 @@ export function GiftCheckout(props: GiftCheckoutProps) {
 }
 
 // =============================================================================
-// Step 1 — coleta de dados do pagador
+// Etapas — indicador + resumo do produto
+// =============================================================================
+
+type CheckoutPhase = 'product' | 'identify' | 'pay';
+
+function CheckoutStepper({ phase }: { phase: CheckoutPhase }) {
+  const index = phase === 'product' ? 0 : phase === 'identify' ? 1 : 2;
+  const pct = ((index + 1) / 3) * 100;
+  const title = index === 0 ? 'Resumo do presente' : index === 1 ? 'Seus dados' : 'Pagamento';
+
+  return (
+    <nav aria-label="Etapas do checkout" className="mb-6 sm:mb-8">
+      <div className="mb-2 flex items-center justify-between gap-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-mute sm:text-xs">
+        <span>Checkout</span>
+        <span className="tabular-nums text-rose-600">{index + 1} / 3</span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-rose-100">
+        <div
+          className="h-full rounded-full bg-rose-600 transition-[width] duration-500 ease-out motion-reduce:transition-none"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <p className="mt-3 font-medium leading-snug text-ink sm:text-[15px]">{title}</p>
+    </nav>
+  );
+}
+
+function ProductSummaryStep({
+  coupleName,
+  productName,
+  productDescription,
+  amountCents,
+  imageUrl,
+  onContinue,
+}: {
+  coupleName: string;
+  productName: string;
+  productDescription: string | null;
+  amountCents: number;
+  imageUrl: string;
+  onContinue: () => void;
+}) {
+  return (
+    <div className="space-y-6 sm:space-y-8">
+      <header>
+        <p className="label-eyebrow">Antes de pagar</p>
+        <h2 className="mt-2 font-serif text-2xl leading-tight tracking-tight text-ink sm:text-3xl">
+          Confira o presente
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-ink-mute sm:text-[15px]">
+          Na próxima etapa você informa seus dados; depois escolhe como pagar com segurança pelo
+          Mercado Pago.
+        </p>
+      </header>
+
+      <div className="relative mx-auto aspect-[4/3] w-full max-w-md overflow-hidden rounded-2xl bg-rose-50 shadow-soft ring-1 ring-rose-100/90 sm:aspect-[5/4] sm:rounded-3xl">
+        <Image
+          src={imageUrl}
+          alt={productName}
+          fill
+          className="object-cover"
+          sizes="(max-width: 640px) 100vw, 28rem"
+          priority
+        />
+      </div>
+
+      <div className="rounded-2xl border border-rose-100/80 bg-gradient-to-br from-white to-rose-50/30 px-4 py-5 sm:px-6 sm:py-6">
+        <p className="label-eyebrow text-[10px] sm:text-xs">Presente para</p>
+        <p className="mt-1 font-serif text-xl text-ink sm:text-2xl">{coupleName}</p>
+        <h3 className="mt-4 font-serif text-lg leading-snug text-ink sm:text-xl">{productName}</h3>
+        {productDescription ? (
+          <p className="mt-2 text-sm leading-relaxed text-ink-mute sm:text-[15px]">
+            {productDescription}
+          </p>
+        ) : null}
+        <p className="mt-5 font-serif text-2xl tabular-nums text-rose-600 sm:text-3xl">
+          {formatBRL(amountCents)}
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={onContinue}
+        className="btn-primary min-h-12 w-full text-base shadow-[0_12px_36px_-16px_rgba(194,24,91,0.45)]"
+      >
+        Continuar — meus dados
+      </button>
+    </div>
+  );
+}
+
+// =============================================================================
+// Step — coleta de dados do pagador
 // =============================================================================
 
 interface IdentifyFormProps {
@@ -242,19 +369,27 @@ interface IdentifyFormProps {
   payer: PayerData;
   onChange: (next: PayerData) => void;
   onSubmit: (e: React.FormEvent) => void;
+  onBack: () => void;
   error: string | null;
 }
 
-function IdentifyForm({ amountCents, payer, onChange, onSubmit, error }: IdentifyFormProps) {
+function IdentifyForm({ amountCents, payer, onChange, onSubmit, onBack, error }: IdentifyFormProps) {
   return (
     <form onSubmit={onSubmit} className="space-y-5 sm:space-y-6">
+      <button
+        type="button"
+        onClick={onBack}
+        className="inline-flex min-h-11 items-center gap-2 rounded-full py-1.5 pl-1 pr-3 text-sm font-medium text-ink-mute transition hover:bg-white/80 hover:text-rose-700 active:scale-[0.99]"
+      >
+        <ArrowLeft className="h-4 w-4 shrink-0" /> Voltar ao resumo
+      </button>
       <header>
-        <p className="label-eyebrow">Você está a um passo</p>
+        <p className="label-eyebrow">Quase lá</p>
         <h2 className="mt-2 font-serif text-2xl leading-tight tracking-tight text-ink sm:text-3xl md:text-[2rem]">
           Quem está presenteando?
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-ink-mute sm:text-[15px]">
-          Os dados aparecem no comprovante do casal e são exigidos pelo Mercado Pago para PIX e
+          Esses dados entram no comprovante para o casal. O Mercado Pago exige CPF para PIX e
           boleto.
         </p>
       </header>
@@ -382,14 +517,41 @@ function BrickStep({ amountCents, payer, onSubmit, onBack, error }: BrickStepPro
       paymentMethods: {
         creditCard: 'all',
         debitCard: 'all',
-        // Bank transfer aceita string[] com chave 'pix'.
         bankTransfer: ['pix'],
         ticket: 'all',
         maxInstallments: 12,
       } as IPaymentBrickCustomization['paymentMethods'],
       visual: {
-        style: { theme: 'default' },
         hideFormTitle: true,
+        hideRedirectionPanel: true,
+        style: {
+          theme: 'default',
+          customVariables: {
+            baseColor: '#C2185B',
+            baseColorFirstVariant: '#D5497F',
+            baseColorSecondVariant: '#FCE4EC',
+            secondaryColor: '#6E6577',
+            formBackgroundColor: 'rgba(255,255,255,0.02)',
+            inputBackgroundColor: '#FFFFFF',
+            textPrimaryColor: '#1F1B24',
+            textSecondaryColor: '#6E6577',
+            outlinePrimaryColor: '#C2185B',
+            outlineSecondaryColor: '#F8BBD9',
+            errorColor: '#9C124A',
+            buttonTextColor: '#FFFFFF',
+            fontSizeExtraSmall: '11px',
+            fontSizeSmall: '13px',
+            fontSizeMedium: '14px',
+            fontSizeLarge: '15px',
+            fontSizeExtraLarge: '16px',
+            borderRadiusSmall: '8px',
+            borderRadiusMedium: '12px',
+            borderRadiusLarge: '14px',
+            formPadding: '4px',
+            inputVerticalPadding: '12px',
+            inputHorizontalPadding: '12px',
+          },
+        },
       },
     }),
     [],
@@ -407,11 +569,10 @@ function BrickStep({ amountCents, payer, onSubmit, onBack, error }: BrickStepPro
       <header>
         <p className="label-eyebrow">Pagamento</p>
         <h2 className="mt-2 font-serif text-2xl leading-tight text-ink sm:text-3xl md:text-[2rem]">
-          Finalize com segurança
+          Escolha como pagar
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-ink-mute sm:text-[15px]">
-          Cartão, PIX, boleto e débito virtual Caixa — processado com criptografia pelo Mercado
-          Pago.
+          Cartão, PIX, boleto ou débito virtual Caixa — ambiente criptografado do Mercado Pago.
         </p>
       </header>
 
@@ -424,8 +585,10 @@ function BrickStep({ amountCents, payer, onSubmit, onBack, error }: BrickStepPro
         </p>
       ) : null}
 
-      <div className="rounded-2xl border border-rose-100/90 bg-gradient-to-b from-white to-rose-50/20 p-3 shadow-soft sm:rounded-3xl sm:p-5 md:p-6">
+      <div className="mp-brick-shell w-full min-w-0 overflow-x-auto rounded-2xl border border-rose-100/90 bg-gradient-to-b from-white to-rose-50/15 px-2 py-3 shadow-soft sm:rounded-3xl sm:px-3 sm:py-5 md:px-4 md:py-6 [-webkit-overflow-scrolling:touch]">
         <PaymentBrick
+          id="gift-payment-brick"
+          locale="pt"
           initialization={initialization}
           customization={customization}
           onSubmit={async ({ formData }) => {
