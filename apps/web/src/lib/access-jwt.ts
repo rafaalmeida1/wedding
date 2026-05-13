@@ -3,7 +3,7 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import jwt from 'jsonwebtoken';
 
-/** Mesmo nome que `ACCESS_COOKIE` na API (`apps/api/src/services/cookies.ts`). */
+/** Mesmo nome que `ACCESS_COOKIE` no servidor (`auth-cookies.ts`). */
 export const WG_ACCESS_COOKIE = 'wg_access';
 
 interface AccessLikePayload {
@@ -11,8 +11,7 @@ interface AccessLikePayload {
 }
 
 /**
- * Lê o JWT do cookie httpOnly sem chamar a API. Útil quando o `fetch` servidor→API falha
- * (rede, DNS, env) mas o browser ainda envia `wg_access` na invocação da Server Action.
+ * Lê o JWT do cookie httpOnly no próprio Next (upload em Server Action sem round-trip HTTP).
  */
 export function resolveSessionUserIdFromCookie(): string | null {
   const secret = process.env.JWT_SECRET?.trim();

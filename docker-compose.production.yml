@@ -1,69 +1,28 @@
-version: '3.8'
+# Deploy alvo: Next na Vercel (API + front no mesmo projeto). Postgres/Redis podem ficar no Contabo ou outro host.
+# Este ficheiro serve apenas como referência para subir DB/cache localmente, se precisar.
 
 services:
-  api:
-    build:
-      context: .
-      dockerfile: ./apps/api/Dockerfile
-    container_name: wedding-api-prod
+  postgres:
+    image: postgres:16-alpine
     restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: wedding
     ports:
-      - "${API_PORT:-8887}:8887"
-    environment:
-      NODE_ENV: production
-      API_PORT: "8887"
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
-      JWT_SECRET: ${JWT_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-      JWT_ACCESS_TTL_SECONDS: ${JWT_ACCESS_TTL_SECONDS}
-      JWT_REFRESH_TTL_SECONDS: ${JWT_REFRESH_TTL_SECONDS}
-      APP_URL: ${APP_URL}
-      API_PUBLIC_ORIGIN: ${API_PUBLIC_ORIGIN}
-      COOKIE_DOMAIN: ${COOKIE_DOMAIN}
-      COOKIE_SECURE: ${COOKIE_SECURE}
-      MP_ACCESS_TOKEN: ${MP_ACCESS_TOKEN}
-      MP_WEBHOOK_SECRET: ${MP_WEBHOOK_SECRET}
-      MP_NOTIFICATION_URL: ${MP_NOTIFICATION_URL}
-      MP_STATEMENT_DESCRIPTOR: ${MP_STATEMENT_DESCRIPTOR}
-      NEXT_PUBLIC_MP_PUBLIC_KEY: ${NEXT_PUBLIC_MP_PUBLIC_KEY}
-      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID}
-      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
-      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
-      R2_BUCKET_NAME: ${R2_BUCKET_NAME}
-    networks:
-      - wedding-prod
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8887/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+      - '5432:5432'
+    volumes:
+      - pg_data:/var/lib/postgresql/data
 
-  workers:
-    build:
-      context: .
-      dockerfile: ./apps/workers/Dockerfile
-    container_name: wedding-workers-prod
+  redis:
+    image: redis:7-alpine
     restart: unless-stopped
-    depends_on:
-      api:
-        condition: service_healthy
-    environment:
-      NODE_ENV: production
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
-      WORKERS_CONCURRENCY: ${WORKERS_CONCURRENCY:-4}
-      SMTP_HOST: ${SMTP_HOST}
-      SMTP_PORT: ${SMTP_PORT}
-      SMTP_SECURE: ${SMTP_SECURE}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASSWORD: ${SMTP_PASSWORD}
-      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL}
-      SMTP_FROM_NAME: ${SMTP_FROM_NAME}
-    networks:
-      - wedding-prod
+    command: ['redis-server', '--appendonly', 'yes']
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
 
-networks:
-  wedding-prod:
-    driver: bridge
+volumes:
+  pg_data:
+  redis_data:

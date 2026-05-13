@@ -30,3 +30,5 @@ drizzle/.snapshot
 
 playwright-report
 test-results
+
+*.tsbuildinfo

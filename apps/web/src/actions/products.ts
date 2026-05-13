@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { productCreateSchema, productUpdateSchema } from '@repo/shared/products';
 import type { OwnerProduct } from '@repo/shared/products';
-import { apiServer, ApiError } from '@/lib/api';
+import { ApiError, serverRequest, serverRequestJson } from '@/lib/server-json';
 
 export interface ProductFormState {
   error?: string;
@@ -34,10 +34,7 @@ export async function createProductAction(
     return { fieldErrors: parsed.error.flatten().fieldErrors };
   }
   try {
-    await apiServer<{ product: OwnerProduct }>('/api/products', {
-      method: 'POST',
-      json: parsed.data,
-    });
+    await serverRequestJson<{ product: OwnerProduct }>('/api/products', 'POST', parsed.data);
   } catch (err) {
     if (err instanceof ApiError) return { error: err.message };
     return { error: 'erro inesperado' };
@@ -63,10 +60,7 @@ export async function updateProductAction(
     return { fieldErrors: parsed.error.flatten().fieldErrors };
   }
   try {
-    await apiServer<{ product: OwnerProduct }>(`/api/products/${id}`, {
-      method: 'PATCH',
-      json: parsed.data,
-    });
+    await serverRequestJson<{ product: OwnerProduct }>(`/api/products/${id}`, 'PATCH', parsed.data);
   } catch (err) {
     if (err instanceof ApiError) return { error: err.message };
     return { error: 'erro inesperado' };
@@ -80,7 +74,7 @@ export async function deleteProductAction(formData: FormData) {
   const id = formData.get('id');
   if (typeof id !== 'string') return;
   try {
-    await apiServer<{ ok: true }>(`/api/products/${id}`, { method: 'DELETE' });
+    await serverRequest<{ ok: true }>(`/api/products/${id}`, { method: 'DELETE' });
   } catch (err) {
     if (err instanceof ApiError) throw new Error(err.message);
     throw err;
@@ -89,13 +83,13 @@ export async function deleteProductAction(formData: FormData) {
 }
 
 export async function listOwnerProducts(): Promise<OwnerProduct[]> {
-  const { data } = await apiServer<{ products: OwnerProduct[] }>('/api/products');
+  const data = await serverRequest<{ products: OwnerProduct[] }>('/api/products');
   return data.products;
 }
 
 export async function getOwnerProduct(id: string): Promise<OwnerProduct | null> {
   try {
-    const { data } = await apiServer<{ product: OwnerProduct }>(`/api/products/${id}`);
+    const data = await serverRequest<{ product: OwnerProduct }>(`/api/products/${id}`);
     return data.product;
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) return null;

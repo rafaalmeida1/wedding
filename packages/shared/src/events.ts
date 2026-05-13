@@ -1,17 +1,5 @@
 import { z } from 'zod';
 
-/** Prefixo Redis BullMQ (compartilhado API + workers). */
-export const BULL_JOB_PREFIX = 'wedding:jobs';
-
-/** Nomes das filas BullMQ (persistem no mesmo Redis das demais operações da app). */
-export const JobQueues = {
-  PaymentEvents: 'payment.events',
-  StockUpdate: 'stock.update',
-  EmailSend: 'email.send',
-} as const;
-
-export type JobQueueName = (typeof JobQueues)[keyof typeof JobQueues];
-
 export const paymentEventSchema = z.object({
   paymentId: z.string().uuid(),
   productId: z.string().uuid(),

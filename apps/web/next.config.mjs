@@ -24,9 +24,9 @@ const remotePatterns = [
 ];
 
 try {
-  const api = process.env.NEXT_PUBLIC_API_URL?.trim();
-  if (api) {
-    const { protocol, hostname } = new URL(api);
+  const appUrl = process.env.APP_URL?.trim();
+  if (appUrl) {
+    const { protocol, hostname } = new URL(appUrl);
     if (hostname) {
       remotePatterns.push({
         protocol: protocol === 'http:' ? 'http' : 'https',
@@ -35,13 +35,13 @@ try {
     }
   }
 } catch {
-  // NEXT_PUBLIC_API_URL opcional durante CI
+  // APP_URL opcional durante CI
 }
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  transpilePackages: ['@repo/shared'],
+  transpilePackages: ['@repo/shared', '@repo/db'],
   webpack: (config) => {
     // @repo/shared uses NodeNext-style `.js` specifiers on `.ts` sources; map them for webpack.
     config.resolve.extensionAlias = {

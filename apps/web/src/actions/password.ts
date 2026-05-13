@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { forgotPasswordSchema, resetPasswordSchema } from '@repo/shared/auth';
-import { apiServer, ApiError } from '@/lib/api';
+import { ApiError, serverRequestJson } from '@/lib/server-json';
 
 export interface PasswordState {
   error?: string;
@@ -19,10 +19,7 @@ export async function forgotPasswordAction(
     return { fieldErrors: parsed.error.flatten().fieldErrors };
   }
   try {
-    await apiServer<{ ok: true }>('/api/auth/forgot-password', {
-      method: 'POST',
-      json: parsed.data,
-    });
+    await serverRequestJson<{ ok: true }>('/api/auth/forgot-password', 'POST', parsed.data);
   } catch (err) {
     if (err instanceof ApiError) return { error: err.message };
     return { error: 'erro inesperado' };
@@ -43,10 +40,7 @@ export async function resetPasswordAction(
     return { fieldErrors: parsed.error.flatten().fieldErrors };
   }
   try {
-    await apiServer<{ ok: true }>('/api/auth/reset-password', {
-      method: 'POST',
-      json: parsed.data,
-    });
+    await serverRequestJson<{ ok: true }>('/api/auth/reset-password', 'POST', parsed.data);
   } catch (err) {
     if (err instanceof ApiError) return { error: err.message };
     return { error: 'erro inesperado' };

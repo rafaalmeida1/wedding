@@ -27,7 +27,6 @@ function clientOrThrow(): S3Client {
     endpoint: r2Endpoint(accountId),
     forcePathStyle: true,
     credentials: { accessKeyId, secretAccessKey },
-    // R2 não implementa x-amz-checksum-crc32 enviado por padrão pelo SDK ≥3.729.
     requestChecksumCalculation: 'WHEN_REQUIRED',
   });
   return cachedClient;
@@ -41,7 +40,6 @@ function bucketOrThrow(): string {
   return b;
 }
 
-/** Espelho da lógica da API (`r2.ts`): R2 público OU proxy na API pública. */
 function effectiveDirectPublicBase(): string | undefined {
   const raw = (process.env.R2_PUBLIC_URL ?? '').trim().replace(/\/$/, '');
   if (!raw) return undefined;
@@ -49,7 +47,7 @@ function effectiveDirectPublicBase(): string | undefined {
     if (!warnedInvalidR2Public) {
       warnedInvalidR2Public = true;
       console.warn(
-        '[web:r2] R2_PUBLIC_URL aponta para *.cloudflarestorage.com — use *.r2.dev ou domínio público ou deixe vazio para proxy na API.',
+        '[web:r2] R2_PUBLIC_URL aponta para *.cloudflarestorage.com — use *.r2.dev ou deixe vazio para proxy no Next (`/api/public/r2/`).',
       );
     }
     return undefined;
@@ -57,27 +55,30 @@ function effectiveDirectPublicBase(): string | undefined {
   return raw;
 }
 
+function siteOriginOrThrow(): string {
+  const app = (process.env.APP_URL ?? '').trim().replace(/\/$/, '');
+  if (app) return app;
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL.replace(/\/$/, '')}`;
+  }
+  if (process.env.NODE_ENV !== 'production') {
+    return 'http://localhost:3000';
+  }
+  throw new Error('Defina APP_URL (URL pública do site Next na Vercel).');
+}
+
+/** Base pública para montar URL de imagem (R2 direto ou proxy no próprio Next). */
 export function resolveProductImagePublicUrlBase(): string {
   const direct = effectiveDirectPublicBase();
   if (direct) return direct;
-  const apiOrigin = (
-    process.env.API_PUBLIC_ORIGIN ??
-    process.env.NEXT_PUBLIC_API_URL ??
-    (process.env.NODE_ENV !== 'production' ? 'http://localhost:8080' : '')
-  )
-    .toString()
-    .trim()
-    .replace(/\/$/, '');
-  if (!apiOrigin) {
-    throw new Error(
-      'Para URLs de imagem: defina R2_PUBLIC_URL público OU NEXT_PUBLIC_API_URL (origem HTTPS da sua API para /api/public/r2/).',
-    );
-  }
-  return `${apiOrigin}/api/public/r2`;
+  const origin = siteOriginOrThrow();
+  return `${origin}/api/public/r2`;
 }
 
 export function productImagePublicUrl(key: string): string {
-  return `${resolveProductImagePublicUrlBase()}/${key}`;
+  const base = resolveProductImagePublicUrlBase();
+  const segments = key.split('/').map(encodeURIComponent);
+  return `${base}/${segments.join('/')}`;
 }
 
 export async function putProductImage(args: {

@@ -1,11 +1,8 @@
-// Browser-safe HTTP client. Não importe nada de `next/headers` aqui.
+// Browser-safe HTTP client — mesma origem (`/api/...`).
 
 import { ApiError, extractMessage, safeJson } from '@/lib/api-error';
 
 export { ApiError } from '@/lib/api-error';
-
-const PUBLIC_API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8080';
 
 interface RequestOptions extends RequestInit {
   json?: unknown;
@@ -26,7 +23,7 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
     credentials: 'include',
   };
 
-  const res = await fetch(`${PUBLIC_API_URL}${path}`, init);
+  const res = await fetch(path.startsWith('/') ? path : `/${path}`, init);
   const text = await res.text();
   const data = text ? safeJson(text) : null;
   if (!res.ok) {

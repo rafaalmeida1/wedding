@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { updateProfileSchema } from '@repo/shared/auth';
 import type { AuthUser } from '@repo/shared/auth';
-import { apiServer, ApiError } from '@/lib/api';
+import { ApiError, serverRequestJson } from '@/lib/server-json';
 
 export interface SettingsState {
   error?: string;
@@ -24,10 +24,7 @@ export async function updateProfileAction(
     return { fieldErrors: parsed.error.flatten().fieldErrors };
   }
   try {
-    await apiServer<{ user: AuthUser }>('/api/auth/profile', {
-      method: 'PATCH',
-      json: parsed.data,
-    });
+    await serverRequestJson<{ user: AuthUser }>('/api/auth/profile', 'PATCH', parsed.data);
   } catch (err) {
     if (err instanceof ApiError) return { error: err.message };
     return { error: 'erro inesperado' };

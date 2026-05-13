@@ -1,4 +1,5 @@
-import { apiServer, ApiError } from '@/lib/api';
+import 'server-only';
+import { ApiError, serverRequest } from '@/lib/server-json';
 import type { PublicProduct } from '@repo/shared';
 
 export interface PublicCouple {
@@ -20,10 +21,12 @@ export interface PublicGiftData {
 export async function getPublicList(username: string): Promise<PublicListData | null> {
   try {
     const [couple, products] = await Promise.all([
-      apiServer<{ couple: PublicCouple }>(`/api/users/${username}`),
-      apiServer<{ products: PublicProduct[] }>(`/api/users/${username}/products`),
+      serverRequest<{ couple: PublicCouple }>(`/api/users/${encodeURIComponent(username)}`),
+      serverRequest<{ products: PublicProduct[] }>(
+        `/api/users/${encodeURIComponent(username)}/products`,
+      ),
     ]);
-    return { couple: couple.data.couple, products: products.data.products };
+    return { couple: couple.couple, products: products.products };
   } catch (err) {
     if (
       err instanceof ApiError &&
@@ -39,10 +42,9 @@ export async function getPublicGift(
   id: string,
 ): Promise<PublicGiftData | null> {
   try {
-    const { data } = await apiServer<PublicGiftData>(
-      `/api/users/${username}/products/${id}`,
+    return await serverRequest<PublicGiftData>(
+      `/api/users/${encodeURIComponent(username)}/products/${encodeURIComponent(id)}`,
     );
-    return data;
   } catch (err) {
     if (
       err instanceof ApiError &&

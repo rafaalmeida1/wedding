@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-// Fluxo end-to-end de cadastro → dashboard → logout. Depende do backend rodando
-// (`pnpm dev` no monorepo) e usa um e-mail único por execução.
+// Fluxo e2e: cadastro → dashboard → logout. Com `pnpm dev` na raiz sobe só o Next (API incluída).
 test('signup → dashboard → logout', async ({ page }) => {
   const stamp = Date.now();
   const email = `e2e-${stamp}@example.com`;

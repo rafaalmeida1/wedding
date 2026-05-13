@@ -24,9 +24,7 @@ const nodeBinary = process.execPath;
 
 const targets = [
   'node_modules/.bin',
-  'apps/api/node_modules/.bin',
   'apps/web/node_modules/.bin',
-  'apps/workers/node_modules/.bin',
   'packages/db/node_modules/.bin',
   'packages/shared/node_modules/.bin',
 ];
