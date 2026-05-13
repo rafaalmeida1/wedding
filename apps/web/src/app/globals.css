@@ -80,3 +80,34 @@ body {
   -webkit-text-fill-color: #1f1b24 !important;
   caret-color: #1f1b24 !important;
 }
+
+/*
+ * “Parcelamento disponível” e chips parecidos: o fundo (pill) às vezes fica numa só linha
+ * enquanto o texto quebra. box-decoration-break + inline-flex corrige na maioria dos casos.
+ */
+#gift-payment-brick [class*='tag'],
+#gift-payment-brick [class*='badge'],
+#gift-payment-brick [class*='chip'],
+#gift-payment-brick [class*='pill'],
+#gift-payment-brick [class*='andes-tag'],
+#gift-payment-brick [class*='highlight'] {
+  display: inline-flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  align-self: flex-start !important;
+  max-width: 100% !important;
+  width: fit-content !important;
+  padding: 0.2rem 0.55rem !important;
+  line-height: 1.35 !important;
+  text-align: left !important;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+#gift-payment-brick li span,
+#gift-payment-brick [role='option'] span,
+#gift-payment-brick [role='radio'] ~ * span,
+#gift-payment-brick label span {
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
