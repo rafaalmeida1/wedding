@@ -51,3 +51,31 @@ body {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+/*
+ * Contraste dos campos nativos do Brick (especialmente e-mail do PIX e autofill do navegador).
+ * O SDK nem sempre respeita só customVariables; reforçamos fundo claro + texto escuro.
+ */
+#gift-payment-brick input:not([type='radio']):not([type='checkbox']),
+#gift-payment-brick textarea,
+#gift-payment-brick select {
+  background-color: #ffffff !important;
+  color: #1f1b24 !important;
+}
+
+#gift-payment-brick input:not([type='radio']):not([type='checkbox'])::placeholder,
+#gift-payment-brick textarea::placeholder {
+  color: #6e6577 !important;
+  opacity: 1 !important;
+}
+
+#gift-payment-brick input:-webkit-autofill,
+#gift-payment-brick input:-webkit-autofill:hover,
+#gift-payment-brick input:-webkit-autofill:focus,
+#gift-payment-brick textarea:-webkit-autofill,
+#gift-payment-brick select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #1f1b24 !important;
+  caret-color: #1f1b24 !important;
+}

@@ -564,31 +564,37 @@ function BrickStep({ amountCents, payer, onSubmit, onBack, error }: BrickStepPro
         hideFormTitle: true,
         hideRedirectionPanel: true,
         style: {
-          theme: 'default',
+          /* `flat` evita painéis muito escuros que o tema default às vezes aplica em sub-formulários (ex.: e-mail PIX). */
+          theme: 'flat',
           customVariables: {
             baseColor: '#C2185B',
             baseColorFirstVariant: '#D5497F',
-            baseColorSecondVariant: '#FCE4EC',
-            secondaryColor: '#6E6577',
-            formBackgroundColor: 'rgba(255,255,255,0.02)',
+            baseColorSecondVariant: '#FFF1F5',
+            secondaryColor: '#5c5466',
+            /* Fundo explícito claro — evita inputs “filled” escuros */
+            formBackgroundColor: '#FFFFFF',
             inputBackgroundColor: '#FFFFFF',
             textPrimaryColor: '#1F1B24',
-            textSecondaryColor: '#6E6577',
+            textSecondaryColor: '#5c5466',
             outlinePrimaryColor: '#C2185B',
             outlineSecondaryColor: '#F8BBD9',
             errorColor: '#9C124A',
+            successColor: '#2E7D32',
             buttonTextColor: '#FFFFFF',
-            fontSizeExtraSmall: '11px',
+            fontSizeExtraSmall: '12px',
             fontSizeSmall: '13px',
             fontSizeMedium: '14px',
             fontSizeLarge: '15px',
             fontSizeExtraLarge: '16px',
-            borderRadiusSmall: '8px',
+            borderRadiusSmall: '10px',
             borderRadiusMedium: '12px',
-            borderRadiusLarge: '14px',
-            formPadding: '4px',
-            inputVerticalPadding: '12px',
-            inputHorizontalPadding: '12px',
+            borderRadiusLarge: '16px',
+            formPadding: '12px',
+            inputVerticalPadding: '14px',
+            inputHorizontalPadding: '14px',
+            inputBorderWidth: '1px',
+            inputFocusedBorderWidth: '2px',
+            inputFocusedBoxShadow: '0 0 0 3px rgba(194, 24, 91, 0.15)',
           },
         },
       },
@@ -605,13 +611,13 @@ function BrickStep({ amountCents, payer, onSubmit, onBack, error }: BrickStepPro
       >
         <ArrowLeft className="h-4 w-4 shrink-0" /> Voltar
       </button>
-      <header>
-        <p className="label-eyebrow">Pagamento</p>
-        <h2 className="mt-2 font-serif text-2xl leading-tight text-ink sm:text-3xl md:text-[2rem]">
+      <header className="space-y-1">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-rose-600">Pagamento</p>
+        <h2 className="font-sans text-xl font-semibold leading-snug text-ink sm:text-2xl">
           Escolha como pagar
         </h2>
-        <p className="mt-2 text-sm leading-relaxed text-ink-mute sm:text-[15px]">
-          Cartão, PIX, boleto ou débito virtual Caixa — ambiente criptografado do Mercado Pago.
+        <p className="text-sm leading-relaxed text-ink-mute sm:text-[15px]">
+          Cartão, PIX, boleto ou débito virtual Caixa — processado pelo Mercado Pago.
         </p>
       </header>
 
@@ -624,7 +630,7 @@ function BrickStep({ amountCents, payer, onSubmit, onBack, error }: BrickStepPro
         </p>
       ) : null}
 
-      <div className="mp-brick-shell w-full min-w-0 overflow-x-auto rounded-2xl border border-rose-100/90 bg-gradient-to-b from-white to-rose-50/15 px-2 py-3 shadow-soft sm:rounded-3xl sm:px-3 sm:py-5 md:px-4 md:py-6 [-webkit-overflow-scrolling:touch]">
+      <div className="mp-brick-shell w-full min-w-0 overflow-x-auto rounded-2xl border border-rose-100/90 bg-white px-3 py-4 shadow-soft sm:rounded-3xl sm:px-4 sm:py-6 [-webkit-overflow-scrolling:touch]">
         <PaymentBrick
           id="gift-payment-brick"
           locale="pt"
