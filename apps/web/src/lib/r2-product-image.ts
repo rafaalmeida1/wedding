@@ -1,5 +1,6 @@
 import 'server-only';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { getPublicSiteOrigin } from '@/lib/public-site-origin';
 
 /** Mesmo limite do schema de produtos. */
 const MAX_BYTES = 8 * 1024 * 1024;
@@ -56,15 +57,7 @@ function effectiveDirectPublicBase(): string | undefined {
 }
 
 function siteOriginOrThrow(): string {
-  const app = (process.env.APP_URL ?? '').trim().replace(/\/$/, '');
-  if (app) return app;
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL.replace(/\/$/, '')}`;
-  }
-  if (process.env.NODE_ENV !== 'production') {
-    return 'http://localhost:3000';
-  }
-  throw new Error('Defina APP_URL (URL pública do site Next na Vercel).');
+  return getPublicSiteOrigin();
 }
 
 /** Base pública para montar URL de imagem (R2 direto ou proxy no próprio Next). */

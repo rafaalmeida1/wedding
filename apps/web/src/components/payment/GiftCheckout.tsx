@@ -11,8 +11,9 @@
 //                         - PIX             → QR + polling → mesma celebração ao aprovar
 //                         - boleto/débito   → mesmo padrão após polling
 //
-// Overlay `PaymentFlow` também cobre o passo "pay" durante `processing`, para ver
-// a animação de processamento mesmo antes de trocar de tela.
+// Overlay `PaymentFlow` cobre o passo "pay" enquanto o POST /api/payments corre:
+//   - PIX / boleto / Caixa → "Gerando…" (visual próprio por método)
+//   - Cartão → "Processando pagamento"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
@@ -26,10 +27,12 @@ import type {
   CreatePaymentResult,
   PaymentStatusResult,
 } from '@repo/shared/payments';
+import { detectPaymentMethod } from '@repo/shared/payments';
 import { apiClient, ApiError } from '@/lib/api-client';
 import { initMP } from '@/lib/mercadopago-client';
 import { formatBRL } from '@/lib/format';
 import { PaymentFlow, type FlowState } from '@/components/payment/PaymentFlow';
+import { motion } from 'framer-motion';
 
 // Carregamos o Brick com SSR desabilitado para evitar acessar `window` no servidor.
 const PaymentBrick = dynamic(
@@ -96,7 +99,7 @@ export function GiftCheckout(props: GiftCheckoutProps) {
   async function handleSubmitBrick(formData: BrickFormData): Promise<void> {
     setError(null);
     celebrationLockRef.current = false;
-    setFlowState('processing');
+    setFlowState(brickSubmitOverlayState(formData));
     try {
       const body: CreatePaymentInput = {
         username: props.username,
@@ -542,6 +545,7 @@ function PixCard({
   onBack: () => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const [userMarkedPaid, setUserMarkedPaid] = useState(false);
   async function copy() {
     await navigator.clipboard.writeText(pix.qrCode);
     setCopied(true);
@@ -579,10 +583,42 @@ function PixCard({
           </button>
         </div>
       </div>
-      <p className="text-xs text-ink-mute">
-        Esperando pagamento... você pode fechar e voltar mais tarde — assim que o banco confirmar o
-        PIX, enviaremos um e-mail.
-      </p>
+      {userMarkedPaid ? (
+        <div
+          className="rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-3"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex items-center gap-3">
+            <motion.span
+              className="h-10 w-10 shrink-0 rounded-full border-2 border-rose-500 border-t-transparent"
+              animate={{ rotate: 360 }}
+              transition={{ duration: 0.9, repeat: Infinity, ease: 'linear' }}
+              aria-hidden
+            />
+            <div>
+              <p className="font-medium text-ink">Processando pagamento</p>
+              <p className="text-xs text-ink-mute">
+                Confirmando com o Mercado Pago e o banco. Isso costuma levar alguns segundos.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          <p className="text-xs text-ink-mute">
+            Depois de pagar pelo app do banco, toque abaixo para acompanharmos a confirmação. Você
+            também pode fechar a página — enviaremos um e-mail quando o PIX entrar.
+          </p>
+          <button
+            type="button"
+            onClick={() => setUserMarkedPaid(true)}
+            className="btn-primary w-full text-sm"
+          >
+            Já paguei o PIX
+          </button>
+        </>
+      )}
       <button onClick={onBack} className="btn-ghost inline-flex text-sm">
         <ArrowLeft className="h-4 w-4" /> Voltar
       </button>
@@ -686,4 +722,16 @@ function formatCpf(digits: string): string {
 
 function isValidCpfDigits(v: string): boolean {
   return onlyDigits(v).length === 11;
+}
+
+/** Overlay durante o POST /api/payments: cada método com visual próprio até a resposta. */
+function brickSubmitOverlayState(fd: BrickFormData): FlowState {
+  const m = detectPaymentMethod({
+    paymentMethodId: fd.payment_method_id,
+    paymentTypeId: fd.payment_type_id,
+  });
+  if (m === 'pix') return 'generating_pix';
+  if (m === 'boleto') return 'generating_boleto';
+  if (m === 'debit_caixa') return 'generating_debit_caixa';
+  return 'processing';
 }

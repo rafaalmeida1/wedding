@@ -1,5 +1,5 @@
 import { productUpdateSchema, type OwnerProduct } from '@repo/shared/products';
-import { and, eq, products } from '@repo/db';
+import { and, eq, payments, products, sql } from '@repo/db';
 import { z } from 'zod';
 import { getDb } from '@/server/db';
 import { jsonErr, jsonOk } from '@/server/http';
@@ -118,7 +118,34 @@ export async function DELETE(req: Request, { params }: Ctx) {
     .where(and(eq(products.id, id), eq(products.userId, auth.sub)))
     .limit(1);
   if (!existing) return jsonErr('product not found', 404);
-  await db.delete(products).where(eq(products.id, id));
+
+  const countRows = await db
+    .select({ n: sql<number>`cast(count(*) as int)` })
+    .from(payments)
+    .where(eq(payments.productId, id));
+  const paymentCount = countRows[0]?.n ?? 0;
+  if (paymentCount > 0) {
+    return jsonErr(
+      'Este presente não pode ser excluído porque já tem pagamentos registrados. Defina estoque a 0 para esconder da venda ou edite os dados.',
+      409,
+    );
+  }
+
+  try {
+    await db.delete(products).where(eq(products.id, id));
+  } catch (err: unknown) {
+    const code =
+      typeof err === 'object' && err !== null && 'code' in err
+        ? String((err as { code: unknown }).code)
+        : '';
+    if (code === '23503') {
+      return jsonErr(
+        'Este presente não pode ser excluído porque está ligado a pagamentos.',
+        409,
+      );
+    }
+    throw err;
+  }
   await tryDeleteProductImage(existing.imageUrl);
   await invalidateStockCache(id);
   return jsonOk({ ok: true });

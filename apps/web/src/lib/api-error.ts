@@ -10,9 +10,10 @@ export class ApiError extends Error {
 }
 
 export function extractMessage(data: unknown, fallback: string): string {
-  if (data && typeof data === 'object' && 'message' in data) {
-    const m = (data as { message?: unknown }).message;
-    if (typeof m === 'string' && m.length > 0) return m;
+  if (data && typeof data === 'object') {
+    const o = data as Record<string, unknown>;
+    if (typeof o.message === 'string' && o.message.length > 0) return o.message;
+    if (typeof o.error === 'string' && o.error.length > 0) return o.error;
   }
   return fallback;
 }

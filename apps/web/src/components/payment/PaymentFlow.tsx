@@ -4,11 +4,20 @@ import { AnimatePresence, motion } from 'framer-motion';
 import type { PaymentMethod } from '@repo/shared/payments';
 import { NfcCore } from './NfcCore';
 import { ProcessingOrb } from './ProcessingOrb';
+import { GeneratingMethodVisual } from './GeneratingMethodVisual';
 import { SuccessBurst } from './SuccessBurst';
 import { ReceiptSheet } from './ReceiptSheet';
 import { ParticleField } from './ParticleField';
 
-export type FlowState = 'idle' | 'detecting' | 'processing' | 'approved' | 'receipt';
+export type FlowState =
+  | 'idle'
+  | 'detecting'
+  | 'generating_pix'
+  | 'generating_boleto'
+  | 'generating_debit_caixa'
+  | 'processing'
+  | 'approved'
+  | 'receipt';
 
 interface PaymentFlowProps {
   state: FlowState;
@@ -31,7 +40,11 @@ export function PaymentFlow({
 
   const showOverlay = state !== 'receipt';
   const particleMode =
-    state === 'detecting' ? 'orbit' : state === 'approved' ? 'burst' : 'ambient';
+    state === 'detecting' || state === 'generating_pix'
+      ? 'orbit'
+      : state === 'approved'
+        ? 'burst'
+        : 'ambient';
 
   return (
     <AnimatePresence>
@@ -65,10 +78,37 @@ export function PaymentFlow({
                 </p>
               </>
             )}
+            {state === 'generating_pix' && (
+              <>
+                <GeneratingMethodVisual variant="pix" />
+                <p className="font-serif text-2xl text-ink">Gerando seu PIX</p>
+                <p className="text-sm text-ink-mute">
+                  Criando o QR Code seguro só para este presente...
+                </p>
+              </>
+            )}
+            {state === 'generating_boleto' && (
+              <>
+                <GeneratingMethodVisual variant="boleto" />
+                <p className="font-serif text-2xl text-ink">Gerando boleto</p>
+                <p className="text-sm text-ink-mute">
+                  Montando o código de barras e o boleto desta compra.
+                </p>
+              </>
+            )}
+            {state === 'generating_debit_caixa' && (
+              <>
+                <GeneratingMethodVisual variant="debit_caixa" />
+                <p className="font-serif text-2xl text-ink">Preparando débito Caixa</p>
+                <p className="text-sm text-ink-mute">
+                  Gerando o link para você concluir no app da Caixa.
+                </p>
+              </>
+            )}
             {state === 'processing' && (
               <>
                 <ProcessingOrb />
-                <p className="font-serif text-2xl text-ink">Processando</p>
+                <p className="font-serif text-2xl text-ink">Processando pagamento</p>
                 <p className="text-sm text-ink-mute">Aguarde a confirmação do banco</p>
               </>
             )}

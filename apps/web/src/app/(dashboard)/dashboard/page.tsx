@@ -3,6 +3,7 @@ import { ArrowRight, ReceiptText, Package, Heart } from 'lucide-react';
 import { getCurrentUser } from '@/actions/auth';
 import { getSummary, listPayments } from '@/actions/dashboard';
 import { formatBRL, formatDateTime } from '@/lib/format';
+import { getPublicSiteOrigin } from '@/lib/public-site-origin';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +14,7 @@ export default async function DashboardHomePage() {
     listPayments(),
   ]);
   const recent = payments.slice(0, 5);
+  const publicOrigin = getPublicSiteOrigin();
 
   return (
     <div className="space-y-10">
@@ -25,7 +27,7 @@ export default async function DashboardHomePage() {
             href={`/${user?.username}`}
             className="font-medium text-rose-600 hover:underline"
           >
-            {process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'}/{user?.username}
+            {publicOrigin}/{user?.username}
           </Link>
         </p>
       </header>
