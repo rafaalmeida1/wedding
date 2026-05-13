@@ -49,6 +49,8 @@ interface GiftCheckoutProps {
   coupleName: string;
   productImageUrl: string;
   productDescription: string | null;
+  /** Quando a página já mostra foto grande (PDP); etapa 1 vira só confirmação em texto. */
+  compactProductSummary?: boolean;
 }
 
 interface PayerData {
@@ -218,6 +220,7 @@ export function GiftCheckout(props: GiftCheckoutProps) {
           productDescription={props.productDescription}
           amountCents={props.amountCents}
           imageUrl={props.productImageUrl}
+          compact={props.compactProductSummary}
           onContinue={() => {
             setError(null);
             setStep('identify');
@@ -301,7 +304,8 @@ function ProductSummaryStep({
   productName,
   productDescription,
   amountCents,
-  imageUrl,
+  imageUrl: _imageUrl,
+  compact,
   onContinue,
 }: {
   coupleName: string;
@@ -309,8 +313,43 @@ function ProductSummaryStep({
   productDescription: string | null;
   amountCents: number;
   imageUrl: string;
+  compact?: boolean;
   onContinue: () => void;
 }) {
+  if (compact) {
+    return (
+      <div className="space-y-5 sm:space-y-6">
+        <header>
+          <p className="label-eyebrow">Confirmar</p>
+          <h2 className="mt-2 font-serif text-xl leading-tight text-ink sm:text-2xl">
+            Tudo certo para seguir?
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-ink-mute sm:text-[15px]">
+            Os dados do presente já estão acima. Na próxima etapa você preenche seus dados e depois
+            o pagamento.
+          </p>
+        </header>
+        <div className="rounded-2xl border border-rose-100/80 bg-gradient-to-br from-white to-rose-50/25 px-4 py-4 sm:px-5 sm:py-5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-ink-mute">Resumo</p>
+          <p className="mt-1 font-medium text-ink">
+            <span className="text-ink-mute">Para</span> {coupleName}
+          </p>
+          <p className="mt-2 font-serif text-lg text-ink">{productName}</p>
+          <p className="mt-3 font-serif text-xl tabular-nums text-rose-600 sm:text-2xl">
+            {formatBRL(amountCents)}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onContinue}
+          className="btn-primary min-h-12 w-full text-base shadow-[0_12px_36px_-16px_rgba(194,24,91,0.45)]"
+        >
+          Continuar — meus dados
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 sm:space-y-8">
       <header>
@@ -326,7 +365,7 @@ function ProductSummaryStep({
 
       <div className="relative mx-auto aspect-[4/3] w-full max-w-md overflow-hidden rounded-2xl bg-rose-50 shadow-soft ring-1 ring-rose-100/90 sm:aspect-[5/4] sm:rounded-3xl">
         <Image
-          src={imageUrl}
+          src={_imageUrl}
           alt={productName}
           fill
           className="object-cover"

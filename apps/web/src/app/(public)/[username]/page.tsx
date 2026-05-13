@@ -30,72 +30,109 @@ export default async function PublicListPage({ params }: PageProps) {
   const data = await getPublicList(slug.data);
   if (!data) notFound();
   const { couple, products } = data;
+  const count = products.length;
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-cream">
+    <main className="relative min-h-[100dvh] overflow-x-hidden bg-cream font-sans text-ink">
       <FloralBackdrop />
-      <div className="relative mx-auto max-w-6xl px-6 py-16">
-        <header className="text-center">
+      <div className="relative mx-auto max-w-7xl px-4 pb-20 pt-10 sm:px-6 sm:pb-24 sm:pt-14 lg:px-10">
+        <header className="mx-auto max-w-2xl text-center">
           <p className="label-eyebrow flex items-center justify-center gap-2">
-            <Sparkles className="h-3.5 w-3.5" /> Lista de Casamento
+            <Sparkles className="h-3.5 w-3.5 shrink-0" strokeWidth={2.25} />
+            Lista de casamento
           </p>
-          <h1 className="mt-4 font-serif text-5xl text-ink md:text-6xl">{couple.name}</h1>
-          <p className="mx-auto mt-4 max-w-md text-ink-mute">
-            Sua presença é nosso maior presente. Mas se quiser nos brindar com algo,
-            escolha um item da lista — pagamento direto pelo site, com cartão ou PIX.
+          <h1 className="mt-4 font-serif text-4xl leading-tight tracking-tight text-ink sm:text-5xl lg:text-6xl">
+            {couple.name}
+          </h1>
+          <p className="mx-auto mt-5 max-w-lg text-base leading-relaxed text-ink-mute sm:mt-6 sm:text-lg">
+            Sua presença já é um presente. Se quiser nos mimar com algo da lista, o pagamento é por
+            aqui — cartão ou PIX, com segurança.
           </p>
         </header>
 
-        {products.length === 0 ? (
-          <p className="mt-16 text-center text-ink-mute">
-            A lista ainda está sendo preparada. Volte em breve!
-          </p>
+        {count === 0 ? (
+          <div className="mx-auto mt-16 max-w-md rounded-3xl border border-rose-100/90 bg-white/85 px-8 py-14 text-center shadow-soft backdrop-blur-sm sm:mt-20 sm:py-16">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-50 text-rose-500">
+              <Sparkles className="h-7 w-7" strokeWidth={1.75} />
+            </div>
+            <p className="mt-5 font-serif text-xl text-ink sm:text-2xl">Lista em preparação</p>
+            <p className="mt-3 text-sm leading-relaxed text-ink-mute sm:text-base">
+              Em breve os presentes aparecem por aqui. Volte mais tarde!
+            </p>
+          </div>
         ) : (
-          <ul className="mt-16 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {products.map((p) => (
-              <li
-                key={p.id}
-                className="group card-soft flex flex-col gap-4 transition hover:-translate-y-1 hover:shadow-bloom"
-              >
-                <div className="aspect-square overflow-hidden rounded-2xl bg-rose-50">
-                  <Image
-                    src={p.imageUrl}
-                    alt={p.name}
-                    width={500}
-                    height={500}
-                    className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
-                  />
-                </div>
-                <div>
-                  <h3 className="font-serif text-2xl text-ink">{p.name}</h3>
-                  {p.description ? (
-                    <p className="mt-1 text-sm text-ink-mute line-clamp-2">{p.description}</p>
-                  ) : null}
-                </div>
-                <div className="mt-auto flex items-center justify-between">
-                  <span className="font-serif text-2xl text-rose-600">
-                    {formatBRL(p.priceCents)}
-                  </span>
-                  {p.isOutOfStock ? (
-                    <span className="rounded-full bg-ink-mute/10 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-ink-mute">
-                      Esgotado
-                    </span>
-                  ) : (
+          <>
+            <p className="mt-12 text-center text-sm font-medium text-ink-mute sm:mt-16">
+              <span className="tabular-nums text-ink">{count}</span>{' '}
+              {count === 1 ? 'presente na lista' : 'presentes na lista'}
+            </p>
+            <ul className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:mt-8 lg:grid-cols-3 lg:gap-8">
+              {products.map((p) => (
+                <li key={p.id}>
+                  <article className="group/card flex h-full flex-col overflow-hidden rounded-3xl border border-rose-100/90 bg-white/90 shadow-soft backdrop-blur-sm transition duration-300 hover:-translate-y-0.5 hover:border-rose-200/90 hover:shadow-bloom">
                     <Link
                       href={`/${couple.username}/gift/${p.id}`}
-                      className="btn-primary !py-2 !px-5"
+                      className="relative block aspect-[5/6] overflow-hidden bg-rose-50 sm:aspect-[4/5]"
                     >
-                      <Heart className="h-4 w-4" /> Presentear
+                      <Image
+                        src={p.imageUrl}
+                        alt=""
+                        fill
+                        className="object-cover transition duration-500 ease-out group-hover/card:scale-[1.03]"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      />
+                      <span className="sr-only">Ver presente: {p.name}</span>
+                      {p.isOutOfStock ? (
+                        <div className="absolute inset-0 flex items-center justify-center bg-ink/45 backdrop-blur-[2px]">
+                          <span className="rounded-full bg-white/95 px-4 py-2 text-xs font-bold uppercase tracking-wider text-ink shadow-sm">
+                            Esgotado
+                          </span>
+                        </div>
+                      ) : null}
                     </Link>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
+                    <div className="flex flex-1 flex-col p-5 sm:p-6">
+                      <Link
+                        href={`/${couple.username}/gift/${p.id}`}
+                        className="block outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-2 rounded-md"
+                      >
+                        <h2 className="font-serif text-xl leading-snug text-ink transition group-hover/card:text-rose-700 sm:text-[1.35rem]">
+                          {p.name}
+                        </h2>
+                      </Link>
+                      {p.description ? (
+                        <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-ink-mute">
+                          {p.description}
+                        </p>
+                      ) : (
+                        <p className="mt-2 text-sm text-ink-mute/70">Toque para ver detalhes.</p>
+                      )}
+                      <div className="mt-auto flex flex-col gap-4 border-t border-rose-100/80 pt-5 sm:flex-row sm:items-end sm:justify-between">
+                        <p className="font-serif text-2xl tabular-nums text-rose-600 sm:text-[1.65rem]">
+                          {formatBRL(p.priceCents)}
+                        </p>
+                        {p.isOutOfStock ? (
+                          <span className="inline-flex min-h-12 items-center justify-center rounded-full border border-rose-200/80 bg-rose-50/80 px-5 text-xs font-semibold uppercase tracking-wider text-ink-mute">
+                            Indisponível
+                          </span>
+                        ) : (
+                          <Link
+                            href={`/${couple.username}/gift/${p.id}`}
+                            className="btn-primary w-full min-h-12 justify-center px-6 text-[15px] shadow-[0_10px_32px_-14px_rgba(194,24,91,0.45)] sm:w-auto"
+                          >
+                            <Heart className="h-4 w-4 shrink-0" /> Presentear
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  </article>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
 
-        <footer className="mt-24 text-center text-xs text-ink-mute">
-          <p>✦ ✦ ✦</p>
+        <footer className="mt-20 border-t border-rose-100/60 pt-10 text-center sm:mt-24">
+          <p className="text-xs tracking-[0.25em] text-ink-mute">✦ ✦ ✦</p>
         </footer>
       </div>
     </main>
