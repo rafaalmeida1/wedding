@@ -18,7 +18,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
-import { Lock, ArrowLeft, ExternalLink, Copy, Check } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Copy, Check } from 'lucide-react';
 // O `IPaymentBrickCustomization` não é re-exportado pelo entry principal do
 // `@mercadopago/sdk-react`, mas o pacote não tem campo `exports` então o deep
 // import via subpath é suportado.
@@ -34,54 +34,41 @@ import { initMP } from '@/lib/mercadopago-client';
 import { formatBRL } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { PaymentFlow, type FlowState } from '@/components/payment/PaymentFlow';
-import { motion } from 'framer-motion';
 
-/** Placeholder estático enquanto o chunk do SDK ou o Brick ainda carrega (sem animações chamativas). */
+/**
+ * Mesmo padrão visual do estado “Processando pagamento” no PIX: anel rosa com rotação contínua.
+ * Só CSS (`animate-spin`) — sem Framer no loading do Brick.
+ */
+function BrickCheckoutSpinner({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        'inline-block h-11 w-11 shrink-0 rounded-full border-2 border-rose-500 border-t-transparent',
+        'animate-spin motion-reduce:animate-none',
+        className,
+      )}
+      aria-hidden
+    />
+  );
+}
+
+/** Placeholder enquanto o chunk do SDK ou o Brick ainda carrega — spinner + texto curto. */
 function MercadoPagoBrickSkeleton({ className }: { className?: string }) {
-  const rows = [
-    { hint: 'Cartão', w: '88%' },
-    { hint: 'Caixa', w: '72%' },
-    { hint: 'PIX', w: '45%' },
-    { hint: 'Boleto', w: '62%' },
-  ];
   return (
     <div
       className={cn(
-        'flex min-h-[280px] flex-col rounded-2xl bg-gradient-to-b from-white via-rose-50/20 to-white px-4 py-7 sm:min-h-[308px] sm:rounded-3xl sm:px-5 sm:py-8',
+        'flex min-h-[280px] flex-col items-center justify-center gap-5 rounded-2xl bg-white px-6 py-10 text-center sm:min-h-[308px] sm:rounded-3xl sm:px-8',
         className,
       )}
       role="status"
       aria-live="polite"
       aria-busy="true"
     >
-      <div className="flex flex-col items-center text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100/90 text-rose-600 shadow-inner">
-          <Lock className="h-6 w-6" strokeWidth={2} />
-        </div>
-        <p className="mt-5 text-sm font-semibold text-ink">Carregando checkout…</p>
-        <p className="mt-1.5 max-w-[17.5rem] text-xs leading-relaxed text-ink-mute">
-          Mercado Pago — cartão, PIX, boleto e Caixa.
-        </p>
+      <BrickCheckoutSpinner />
+      <div className="max-w-[19rem] space-y-1.5">
+        <p className="text-sm font-semibold text-ink">Carregando checkout…</p>
+        <p className="text-xs leading-relaxed text-ink-mute">Cartão, PIX, boleto e Caixa — Mercado Pago.</p>
       </div>
-      <ul className="mt-8 flex flex-col gap-2.5" aria-hidden>
-        {rows.map((row) => (
-          <li
-            key={row.hint}
-            className="flex items-center gap-3 rounded-xl border border-rose-100/90 bg-white px-3 py-3"
-          >
-            <div className="h-4 w-4 shrink-0 rounded-full bg-rose-100" />
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-rose-50 text-[10px] font-bold uppercase text-rose-400/85">
-              {row.hint.slice(0, 2)}
-            </div>
-            <div className="min-w-0 flex-1 py-0.5">
-              <div
-                className="h-3 rounded-md bg-rose-100/80"
-                style={{ maxWidth: row.w }}
-              />
-            </div>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
@@ -938,12 +925,7 @@ function PixCard({
           aria-live="polite"
         >
           <div className="flex items-center gap-3 sm:gap-4">
-            <motion.span
-              className="h-11 w-11 shrink-0 rounded-full border-2 border-rose-500 border-t-transparent"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 0.85, repeat: Infinity, ease: 'linear' }}
-              aria-hidden
-            />
+            <BrickCheckoutSpinner />
             <div className="min-w-0">
               <p className="font-semibold text-ink">Processando pagamento</p>
               <p className="mt-1 text-xs leading-relaxed text-ink-mute sm:text-sm">
